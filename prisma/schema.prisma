@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Courier {
+  id          String   @id @default(uuid())
+  name        String
+  phone       String
+  photo       String?
+  status      String   @default("offline")
+  currentLat  Float?
+  currentLng  Float?
+  lastSeen    DateTime?
+  speed       Float    @default(0)
+  heading     Float    @default(0)
+  locations   CourierLocation[]
+  deliveries  Delivery[]
+  alerts      Alert[]
+  createdAt   DateTime @default(now())
+}
+
+model Delivery {
+  id              String   @id @default(uuid())
+  orderNumber     String   @unique
+  customerName    String
+  customerPhone   String
+  pickupAddress   String
+  pickupLat       Float
+  pickupLng       Float
+  deliveryAddress String
+  deliveryLat     Float
+  deliveryLng     Float
+  notes           String?
+  status          String   @default("pending")
+  courierId       String?
+  courier         Courier? @relation(fields: [courierId], references: [id])
+  priority        Int      @default(0)
+  estimatedTime   Int?
+  distance        Float?
+  assignedAt      DateTime?
+  pickedUpAt      DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model CourierLocation {
+  id        String   @id @default(uuid())
+  courierId String
+  courier   Courier  @relation(fields: [courierId], references: [id])
+  lat       Float
+  lng       Float
+  speed     Float    @default(0)
+  heading   Float    @default(0)
+  timestamp DateTime @default(now())
+}
+
+model Alert {
+  id         String   @id @default(uuid())
+  courierId  String
+  courier    Courier  @relation(fields: [courierId], references: [id])
+  type       String
+  message    String
+  severity   String   @default("warning")
+  resolved   Boolean  @default(false)
+  resolvedAt DateTime?
+  createdAt  DateTime @default(now())
+}
