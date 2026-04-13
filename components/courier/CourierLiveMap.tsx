@@ -38,7 +38,7 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
     import("leaflet").then((L) => {
       const center: [number, number] = position
         ? [position.lat, position.lng]
-        : [36.8065, 10.1815];
+        : [37.2744, 9.8739];
 
       const map = L.map(mapRef.current!, {
         center,

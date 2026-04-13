@@ -9,18 +9,22 @@ interface Props {
   onSuccess: () => void;
 }
 
-// Tunis area locations for demo
-const TUNIS_LOCATIONS = [
-  { name: "Centre-ville Tunis", lat: 36.8065, lng: 10.1815 },
-  { name: "La Marsa", lat: 36.8786, lng: 10.3249 },
-  { name: "Ariana", lat: 36.8625, lng: 10.1956 },
-  { name: "Ben Arous", lat: 36.7527, lng: 10.2261 },
-  { name: "La Goulette", lat: 36.8178, lng: 10.3065 },
-  { name: "Manouba", lat: 36.8095, lng: 10.0983 },
-  { name: "Ennahli", lat: 36.8423, lng: 10.2052 },
-  { name: "El Menzah", lat: 36.8497, lng: 10.1918 },
-  { name: "Lac 1", lat: 36.8272, lng: 10.2314 },
-  { name: "Carthage", lat: 36.8613, lng: 10.3246 },
+// Bizerte et environs
+const BIZERTE_LOCATIONS = [
+  { name: "Centre-ville Bizerte", lat: 37.2744, lng: 9.8739 },
+  { name: "Port de Bizerte",      lat: 37.2756, lng: 9.8686 },
+  { name: "Zarzouna",             lat: 37.2511, lng: 9.8481 },
+  { name: "Corniche Bizerte",     lat: 37.2780, lng: 9.8620 },
+  { name: "Remel",                lat: 37.2920, lng: 9.8530 },
+  { name: "El Azib",              lat: 37.2100, lng: 9.8450 },
+  { name: "Menzel Bourguiba",     lat: 37.1532, lng: 9.7987 },
+  { name: "Mateur",               lat: 37.0430, lng: 9.6647 },
+  { name: "Ras Jebel",            lat: 37.2167, lng: 10.1167 },
+  { name: "El Alia",              lat: 37.1667, lng: 9.9833 },
+  { name: "Utique",               lat: 37.0536, lng: 10.0531 },
+  { name: "Sejnane",              lat: 37.0583, lng: 9.2333 },
+  { name: "Joumine",              lat: 37.0333, lng: 9.5333 },
+  { name: "Ghezala",              lat: 37.1500, lng: 9.6167 },
 ];
 
 export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
@@ -139,13 +143,13 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
             className={inputClass}
             value={form.pickupAddress}
             onChange={(e) => {
-              const loc = TUNIS_LOCATIONS.find((l) => l.name === e.target.value);
+              const loc = BIZERTE_LOCATIONS.find((l) => l.name === e.target.value);
               if (loc) setPickup(loc);
             }}
             required
           >
             <option value="">Sélectionner un quartier...</option>
-            {TUNIS_LOCATIONS.map((loc) => (
+            {BIZERTE_LOCATIONS.map((loc) => (
               <option key={loc.name} value={loc.name}>{loc.name}</option>
             ))}
           </select>
@@ -165,13 +169,13 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
             className={inputClass}
             value={form.deliveryAddress}
             onChange={(e) => {
-              const loc = TUNIS_LOCATIONS.find((l) => l.name === e.target.value);
+              const loc = BIZERTE_LOCATIONS.find((l) => l.name === e.target.value);
               if (loc) setDelivery(loc);
             }}
             required
           >
             <option value="">Sélectionner un quartier...</option>
-            {TUNIS_LOCATIONS.map((loc) => (
+            {BIZERTE_LOCATIONS.map((loc) => (
               <option key={loc.name} value={loc.name}>{loc.name}</option>
             ))}
           </select>

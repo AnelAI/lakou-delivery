@@ -22,8 +22,8 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
   const deliveryRouteCacheRef = useRef<Map<string, [number, number][]>>(new Map());
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Tunis, Tunisia center
-  const DEFAULT_CENTER: [number, number] = [36.8065, 10.1815];
+  // Bizerte, Tunisie
+  const DEFAULT_CENTER: [number, number] = [37.2744, 9.8739];
 
   const getStatusColor = (status: string) => {
     switch (status) {
