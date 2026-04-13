@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Courier, Delivery, LocationUpdate } from "@/lib/types";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
+import { getOsrmRoute } from "@/lib/osrm";
 
 interface Props {
   couriers: Courier[];
@@ -18,6 +19,7 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
   const deliveryMarkersRef = useRef<unknown[]>([]);
   const trailsRef = useRef<Map<string, [number, number][]>>(new Map());
   const trailLinesRef = useRef<Map<string, unknown>>(new Map());
+  const deliveryRouteCacheRef = useRef<Map<string, [number, number][]>>(new Map());
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Tunis, Tunisia center
@@ -91,10 +93,16 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
         zoomControl: true,
       });
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-      }).addTo(map);
+      // CartoDB Positron — style épuré proche de Google Maps
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        {
+          subdomains: "abcd",
+          maxZoom: 20,
+          attribution:
+            '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
+        }
+      ).addTo(map);
 
       mapInstanceRef.current = map;
       setIsLoaded(true);
@@ -172,44 +180,100 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
     });
   }, [couriers, isLoaded, createCourierIcon, onCourierClick]);
 
-  // Update delivery markers
+  // Update delivery markers + real road routes via OSRM
   useEffect(() => {
     if (!isLoaded || !mapInstanceRef.current) return;
 
-    import("leaflet").then((L) => {
-      const map = mapInstanceRef.current as import("leaflet").Map;
+    const activeDeliveries = deliveries.filter((d) =>
+      ["assigned", "picked_up", "pending"].includes(d.status)
+    );
 
-      // Clear existing delivery markers
-      deliveryMarkersRef.current.forEach((m) => (m as import("leaflet").Marker).remove());
-      deliveryMarkersRef.current = [];
+    const draw = async () => {
+      // Pre-fetch routes for all non-pending deliveries
+      const routes = new Map<string, [number, number][] | null>();
+      await Promise.all(
+        activeDeliveries
+          .filter((d) => d.status !== "pending")
+          .map(async (d) => {
+            const cacheKey = `${d.id}-${d.status}`;
+            if (deliveryRouteCacheRef.current.has(cacheKey)) {
+              routes.set(d.id, deliveryRouteCacheRef.current.get(cacheKey)!);
+            } else {
+              const route = await getOsrmRoute([
+                [d.pickupLat, d.pickupLng],
+                [d.deliveryLat, d.deliveryLng],
+              ]);
+              if (route) deliveryRouteCacheRef.current.set(cacheKey, route);
+              routes.set(d.id, route);
+            }
+          })
+      );
 
-      // Show active deliveries
-      deliveries
-        .filter((d) => ["assigned", "picked_up", "pending"].includes(d.status))
-        .forEach((delivery) => {
+      import("leaflet").then((L) => {
+        const map = mapInstanceRef.current as import("leaflet").Map;
+
+        // Clear existing delivery markers
+        deliveryMarkersRef.current.forEach((m) =>
+          (m as import("leaflet").Marker).remove()
+        );
+        deliveryMarkersRef.current = [];
+
+        activeDeliveries.forEach((delivery) => {
           const pickupIcon = createDeliveryIcon(L, "pickup");
           const deliveryIcon = createDeliveryIcon(L, "delivery");
+          const courierName = delivery.courier?.name ?? "";
 
-          const pickupMarker = L.marker([delivery.pickupLat, delivery.pickupLng], { icon: pickupIcon })
+          const pickupMarker = L.marker(
+            [delivery.pickupLat, delivery.pickupLng],
+            { icon: pickupIcon }
+          )
             .addTo(map)
-            .bindPopup(`<div class="p-2"><div class="font-bold text-purple-700">Collecte</div><div class="text-sm">${delivery.pickupAddress}</div><div class="text-xs text-gray-500">Client: ${delivery.customerName}</div></div>`);
+            .bindPopup(
+              `<div class="p-2"><div class="font-bold text-purple-700">📦 Collecte</div><div class="text-sm">${delivery.pickupAddress}</div><div class="text-xs text-gray-500">Client : ${delivery.customerName}</div>${courierName ? `<div class="text-xs text-blue-600 mt-1">🏍️ ${courierName}</div>` : ""}</div>`
+            );
 
-          const deliveryMarker = L.marker([delivery.deliveryLat, delivery.deliveryLng], { icon: deliveryIcon })
+          const deliveryMarker = L.marker(
+            [delivery.deliveryLat, delivery.deliveryLng],
+            { icon: deliveryIcon }
+          )
             .addTo(map)
-            .bindPopup(`<div class="p-2"><div class="font-bold text-orange-700">Livraison</div><div class="text-sm">${delivery.deliveryAddress}</div><div class="text-xs text-gray-500">${delivery.orderNumber}</div></div>`);
+            .bindPopup(
+              `<div class="p-2"><div class="font-bold text-orange-700">🏠 Livraison</div><div class="text-sm">${delivery.deliveryAddress}</div><div class="text-xs text-gray-500">${delivery.orderNumber}</div></div>`
+            );
 
           deliveryMarkersRef.current.push(pickupMarker, deliveryMarker);
 
-          // Draw line between pickup and delivery
           if (delivery.status !== "pending") {
-            const line = L.polyline(
-              [[delivery.pickupLat, delivery.pickupLng], [delivery.deliveryLat, delivery.deliveryLng]],
-              { color: "#3b82f6", weight: 2, opacity: 0.5, dashArray: "6, 6" }
-            ).addTo(map);
-            deliveryMarkersRef.current.push(line);
+            const roadRoute = routes.get(delivery.id);
+            if (roadRoute && roadRoute.length >= 2) {
+              // Tracé routier réel (OSRM)
+              const color =
+                delivery.status === "picked_up" ? "#f97316" : "#3b82f6";
+              const line = L.polyline(roadRoute, {
+                color,
+                weight: 4,
+                opacity: 0.65,
+                lineCap: "round",
+                lineJoin: "round",
+              }).addTo(map);
+              deliveryMarkersRef.current.push(line);
+            } else {
+              // Fallback : ligne droite si OSRM indisponible
+              const line = L.polyline(
+                [
+                  [delivery.pickupLat, delivery.pickupLng],
+                  [delivery.deliveryLat, delivery.deliveryLng],
+                ],
+                { color: "#3b82f6", weight: 2, opacity: 0.4, dashArray: "6,6" }
+              ).addTo(map);
+              deliveryMarkersRef.current.push(line);
+            }
           }
         });
-    });
+      });
+    };
+
+    draw();
   }, [deliveries, isLoaded, createDeliveryIcon]);
 
   // Center map on selected courier
