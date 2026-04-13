@@ -10,21 +10,24 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { AddCourierForm } from "@/components/courier/AddCourierForm";
 import { AddDeliveryForm } from "@/components/delivery/AddDeliveryForm";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
-import { Bell, RefreshCw, MapPin, Settings } from "lucide-react";
+import {
+  Bell, RefreshCw, MapPin, Settings, Users, Package, Map,
+} from "lucide-react";
 import Link from "next/link";
 
-// Dynamic import for map (client-side only — Leaflet uses window)
 const DeliveryMap = dynamic(
   () => import("@/components/map/DeliveryMap").then((m) => m.DeliveryMap),
   {
     ssr: false,
     loading: () => (
       <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-500">Chargement de la carte...</div>
+        <div className="text-gray-500 text-sm">Chargement de la carte...</div>
       </div>
     ),
   }
 );
+
+type MobileTab = "map" | "couriers" | "deliveries";
 
 export default function Dashboard() {
   const [couriers, setCouriers] = useState<Courier[]>([]);
@@ -42,6 +45,7 @@ export default function Dashboard() {
   const [showAddCourier, setShowAddCourier] = useState(false);
   const [showAddDelivery, setShowAddDelivery] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("map");
 
   const fetchAll = useCallback(async () => {
     try {
@@ -51,7 +55,6 @@ export default function Dashboard() {
         fetch("/api/alerts?resolved=false"),
         fetch("/api/stats"),
       ]);
-
       if (couriersRes.ok) setCouriers(await couriersRes.json());
       if (deliveriesRes.ok) setDeliveries(await deliveriesRes.json());
       if (alertsRes.ok) setAlerts(await alertsRes.json());
@@ -65,10 +68,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchAll();
-
     const client = getPusherClient();
     const channel = client.subscribe(ADMIN_CHANNEL);
-
     channel.bind(EVENTS.COURIERS_UPDATED, fetchAll);
     channel.bind(EVENTS.DELIVERIES_NEW, fetchAll);
     channel.bind(EVENTS.DELIVERIES_UPDATED, fetchAll);
@@ -78,7 +79,6 @@ export default function Dashboard() {
     channel.bind(EVENTS.ALERTS_UPDATED, (updated: Alert) => {
       setAlerts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     });
-
     return () => {
       channel.unbind_all();
       client.unsubscribe(ADMIN_CHANNEL);
@@ -104,53 +104,55 @@ export default function Dashboard() {
   };
 
   const activeAlerts = alerts.filter((a) => !a.resolved);
+  const pendingDeliveries = deliveries.filter((d) => d.status === "pending").length;
 
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-600 font-medium">Chargement de Lakou Delivery Admin...</p>
+          <p className="text-gray-600 font-medium">Chargement de Lakou Delivery...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Top navbar */}
-      <nav className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-50 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <MapPin size={16} className="text-white" />
-            </div>
-            <span className="font-bold text-gray-800 text-lg">Lakou Delivery</span>
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-              Admin
-            </span>
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+
+      {/* ── Top navbar ──────────────────────────────────────────────────────── */}
+      <nav className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between z-50 flex-shrink-0 gap-2">
+        {/* Logo */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <MapPin size={15} className="text-white" />
           </div>
+          <span className="font-bold text-gray-800 text-base hidden sm:block">Lakou Delivery</span>
+          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Admin</span>
         </div>
 
-        <div className="flex-1 mx-6 overflow-x-auto">
+        {/* Stats bar — scrollable, hidden on very small screens */}
+        <div className="flex-1 mx-2 md:mx-6 overflow-x-auto hidden sm:block">
           <StatsBar initialStats={stats} />
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={fetchAll}
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             title="Actualiser"
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={15} />
           </button>
           <Link
             href="/alerts"
             className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Alertes"
           >
-            <Bell size={16} />
+            <Bell size={15} />
             {activeAlerts.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center leading-none">
                 {activeAlerts.length > 9 ? "9+" : activeAlerts.length}
               </span>
             )}
@@ -158,27 +160,31 @@ export default function Dashboard() {
           <Link
             href="/couriers"
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Gérer les coursiers"
           >
-            <Settings size={16} />
+            <Settings size={15} />
           </Link>
         </div>
       </nav>
 
-      {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Courier panel */}
-        <div className="w-64 flex-shrink-0">
+      {/* Stats bar mobile (visible sous sm) */}
+      <div className="sm:hidden bg-white border-b border-gray-100 px-3 py-1.5 overflow-x-auto">
+        <StatsBar initialStats={stats} />
+      </div>
+
+      {/* ── Desktop layout (md+) : 3 colonnes ──────────────────────────────── */}
+      <div className="hidden md:flex flex-1 overflow-hidden">
+        {/* Gauche : coursiers */}
+        <div className="w-64 flex-shrink-0 border-r border-gray-200">
           <CourierPanel
             couriers={couriers}
             selectedId={selectedCourierId}
-            onSelect={(c) =>
-              setSelectedCourierId(c.id === selectedCourierId ? null : c.id)
-            }
+            onSelect={(c) => setSelectedCourierId(c.id === selectedCourierId ? null : c.id)}
             onAdd={() => setShowAddCourier(true)}
           />
         </div>
 
-        {/* Center: Map */}
+        {/* Centre : carte */}
         <div className="flex-1 relative">
           <DeliveryMap
             couriers={couriers}
@@ -186,13 +192,11 @@ export default function Dashboard() {
             selectedCourierId={selectedCourierId}
             onCourierClick={(c) => setSelectedCourierId(c.id)}
           />
-
-          {/* Alert banner (overlays map) */}
           <AlertBanner initialAlerts={activeAlerts} />
         </div>
 
-        {/* Right: Delivery panel */}
-        <div className="w-72 flex-shrink-0">
+        {/* Droite : livraisons */}
+        <div className="w-72 flex-shrink-0 border-l border-gray-200">
           <DeliveryPanel
             deliveries={deliveries}
             couriers={couriers}
@@ -201,6 +205,95 @@ export default function Dashboard() {
             onAdd={() => setShowAddDelivery(true)}
           />
         </div>
+      </div>
+
+      {/* ── Mobile layout (< md) : onglets + bottom nav ─────────────────────── */}
+      <div className="md:hidden flex-1 overflow-hidden relative">
+        {/* Contenu de l'onglet actif */}
+        <div className="h-full">
+          {mobileTab === "map" && (
+            <div className="h-full relative">
+              <DeliveryMap
+                couriers={couriers}
+                deliveries={deliveries}
+                selectedCourierId={selectedCourierId}
+                onCourierClick={(c) => {
+                  setSelectedCourierId(c.id);
+                }}
+              />
+              <AlertBanner initialAlerts={activeAlerts} />
+            </div>
+          )}
+
+          {mobileTab === "couriers" && (
+            <div className="h-full overflow-y-auto">
+              <CourierPanel
+                couriers={couriers}
+                selectedId={selectedCourierId}
+                onSelect={(c) => {
+                  setSelectedCourierId(c.id === selectedCourierId ? null : c.id);
+                  setMobileTab("map");
+                }}
+                onAdd={() => setShowAddCourier(true)}
+              />
+            </div>
+          )}
+
+          {mobileTab === "deliveries" && (
+            <div className="h-full overflow-y-auto">
+              <DeliveryPanel
+                deliveries={deliveries}
+                couriers={couriers}
+                onAssign={handleAssign}
+                onStatusChange={handleStatusChange}
+                onAdd={() => setShowAddDelivery(true)}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Bottom navigation bar */}
+        <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-50 safe-area-pb">
+          <button
+            onClick={() => setMobileTab("map")}
+            className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors ${
+              mobileTab === "map" ? "text-blue-600" : "text-gray-500"
+            }`}
+          >
+            <Map size={20} />
+            <span>Carte</span>
+          </button>
+
+          <button
+            onClick={() => setMobileTab("couriers")}
+            className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors relative ${
+              mobileTab === "couriers" ? "text-blue-600" : "text-gray-500"
+            }`}
+          >
+            <Users size={20} />
+            <span>Coursiers</span>
+            {couriers.filter((c) => c.status !== "offline").length > 0 && (
+              <span className="absolute top-1.5 right-[calc(50%-16px)] w-4 h-4 bg-green-500 text-white text-xs rounded-full flex items-center justify-center leading-none">
+                {couriers.filter((c) => c.status !== "offline").length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setMobileTab("deliveries")}
+            className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors relative ${
+              mobileTab === "deliveries" ? "text-blue-600" : "text-gray-500"
+            }`}
+          >
+            <Package size={20} />
+            <span>Livraisons</span>
+            {pendingDeliveries > 0 && (
+              <span className="absolute top-1.5 right-[calc(50%-16px)] w-4 h-4 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center leading-none">
+                {pendingDeliveries}
+              </span>
+            )}
+          </button>
+        </nav>
       </div>
 
       {/* Modals */}

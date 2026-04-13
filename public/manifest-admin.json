@@ -1,0 +1,28 @@
+{
+  "name": "Lakou Delivery — Admin",
+  "short_name": "Lakou Admin",
+  "description": "Tableau de bord d'administration pour la livraison de courses",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f9fafb",
+  "theme_color": "#2563eb",
+  "lang": "fr",
+  "categories": ["navigation", "logistics", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-72.png",  "sizes": "72x72",   "type": "image/png" },
+    { "src": "/icons/icon-96.png",  "sizes": "96x96",   "type": "image/png" },
+    { "src": "/icons/icon-128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "/icons/icon-144.png", "sizes": "144x144", "type": "image/png" },
+    { "src": "/icons/icon-152.png", "sizes": "152x152", "type": "image/png" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-384.png", "sizes": "384x384", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Carte temps réel", "url": "/",        "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }] },
+    { "name": "Alertes",          "url": "/alerts",  "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }] },
+    { "name": "Coursiers",        "url": "/couriers","icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }] }
+  ]
+}
