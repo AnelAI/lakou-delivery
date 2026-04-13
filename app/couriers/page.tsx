@@ -9,12 +9,13 @@ import { fr } from "date-fns/locale";
 import {
   ArrowLeft,
   Phone,
-  Package,
   AlertTriangle,
   MapPin,
   Bike,
   Trash2,
   Power,
+  CheckCircle,
+  Share2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -47,6 +48,12 @@ export default function CouriersPage() {
     if (!confirm(`Supprimer le coursier "${name}" ? Cette action est irréversible.`)) return;
     await fetch(`/api/couriers/${id}`, { method: "DELETE" });
     fetchCouriers();
+  };
+
+  const shareWhatsApp = (courierId: string, courierName: string) => {
+    const url = `${window.location.origin}/courier/${courierId}`;
+    const text = `🏍️ Lakou Delivery — Bonjour ${courierName} !\nVoici votre lien de suivi GPS :\n${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   return (
@@ -127,12 +134,18 @@ export default function CouriersPage() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                <div className="grid grid-cols-4 gap-2 mb-4 text-center">
                   <div className="bg-gray-50 rounded-lg p-2">
                     <div className="text-lg font-bold text-blue-600">
                       {courier.deliveries?.length ?? 0}
                     </div>
                     <div className="text-xs text-gray-500">En cours</div>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2">
+                    <div className="text-lg font-bold text-green-600">
+                      {courier.deliveredCount ?? 0}
+                    </div>
+                    <div className="text-xs text-gray-500">Livrées</div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-2">
                     <div className="text-lg font-bold text-red-500">
@@ -210,14 +223,25 @@ export default function CouriersPage() {
                   </button>
                 </div>
 
-                {/* Courier tracking link */}
-                <Link
-                  href={`/courier/${courier.id}`}
-                  className="mt-2 w-full flex items-center justify-center gap-1 text-xs text-blue-600 hover:text-blue-800 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                >
-                  <Power size={12} />
-                  Lien de tracking coursier
-                </Link>
+                {/* Action links */}
+                <div className="mt-2 flex gap-2">
+                  <Link
+                    href={`/courier/${courier.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-1 text-xs text-blue-600 hover:text-blue-800 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <Power size={12} />
+                    Lien tracking
+                  </Link>
+                  <button
+                    onClick={() => shareWhatsApp(courier.id, courier.name)}
+                    className="flex-1 flex items-center justify-center gap-1 text-xs text-green-700 hover:text-green-900 py-1.5 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                  >
+                    <Share2 size={12} />
+                    WhatsApp
+                  </button>
+                </div>
               </div>
             ))}
           </div>

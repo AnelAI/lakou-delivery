@@ -16,6 +16,7 @@ export interface Courier {
   heading: number;
   deliveries?: Delivery[];
   alerts?: Alert[];
+  deliveredCount?: number;
   createdAt: string;
 }
 

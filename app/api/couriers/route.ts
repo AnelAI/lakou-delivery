@@ -15,10 +15,19 @@ export async function GET() {
           orderBy: { createdAt: "desc" },
           take: 5,
         },
+        _count: {
+          select: {
+            deliveries: { where: { status: "delivered" } },
+          },
+        },
       },
       orderBy: { name: "asc" },
     });
-    return NextResponse.json(couriers);
+    const result = couriers.map(({ _count, ...c }) => ({
+      ...c,
+      deliveredCount: _count.deliveries,
+    }));
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching couriers:", error);
     return NextResponse.json({ error: "Failed to fetch couriers" }, { status: 500 });

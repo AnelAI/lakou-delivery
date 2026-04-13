@@ -16,6 +16,8 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
   const mapInstanceRef = useRef<unknown>(null);
   const markersRef = useRef<Map<string, unknown>>(new Map());
   const deliveryMarkersRef = useRef<unknown[]>([]);
+  const trailsRef = useRef<Map<string, [number, number][]>>(new Map());
+  const trailLinesRef = useRef<Map<string, unknown>>(new Map());
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Tunis, Tunisia center
@@ -222,7 +224,7 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
     }
   }, [selectedCourierId, couriers, isLoaded]);
 
-  // Real-time location updates via Pusher
+  // Real-time location updates via Pusher — smooth movement + GPS trail
   useEffect(() => {
     const client = getPusherClient();
     const channel = client.subscribe(ADMIN_CHANNEL);
@@ -231,16 +233,45 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
       if (!isLoaded || !mapInstanceRef.current) return;
 
       import("leaflet").then((L) => {
+        const map = mapInstanceRef.current as import("leaflet").Map;
+        const latlng: [number, number] = [data.lat, data.lng];
+
+        // ── Update or create marker ──────────────────────────────────────────
         const marker = markersRef.current.get(data.courierId);
         if (marker) {
-          (marker as import("leaflet").Marker).setLatLng([data.lat, data.lng]);
+          // Smooth CSS transition on the marker element
+          const el = (marker as import("leaflet").Marker).getElement();
+          if (el) el.style.transition = "transform 0.9s linear";
+          (marker as import("leaflet").Marker).setLatLng(latlng);
         } else {
-          const map = mapInstanceRef.current as import("leaflet").Map;
           const color = getStatusColor(data.status);
           const svg = `<svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="18" r="16" fill="${color}" stroke="white" stroke-width="3"/><text x="20" y="23" font-size="14" text-anchor="middle" fill="white">🏍️</text><polygon points="20,46 13,30 27,30" fill="${color}"/></svg>`;
           const icon = L.divIcon({ html: svg, iconSize: [40, 50], iconAnchor: [20, 50], popupAnchor: [0, -50], className: "" });
-          const newMarker = L.marker([data.lat, data.lng], { icon }).addTo(map);
+          const newMarker = L.marker(latlng, { icon }).addTo(map);
           markersRef.current.set(data.courierId, newMarker);
+        }
+
+        // ── GPS trail ─────────────────────────────────────────────────────────
+        const trail = trailsRef.current.get(data.courierId) ?? [];
+        trail.push(latlng);
+        if (trail.length > 150) trail.shift();
+        trailsRef.current.set(data.courierId, trail);
+
+        if (trail.length >= 2) {
+          const existingLine = trailLinesRef.current.get(data.courierId);
+          if (existingLine) {
+            (existingLine as import("leaflet").Polyline).setLatLngs(trail);
+          } else {
+            const line = L.polyline(trail, {
+              color: getStatusColor(data.status),
+              weight: 3,
+              opacity: 0.5,
+              lineCap: "round",
+              lineJoin: "round",
+              dashArray: undefined,
+            }).addTo(map);
+            trailLinesRef.current.set(data.courierId, line);
+          }
         }
       });
     });
@@ -248,6 +279,12 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
     return () => {
       channel.unbind(EVENTS.COURIER_LOCATION_UPDATE);
       client.unsubscribe(ADMIN_CHANNEL);
+      // Clean up trail polylines
+      trailLinesRef.current.forEach((line) =>
+        (line as import("leaflet").Polyline).remove()
+      );
+      trailLinesRef.current.clear();
+      trailsRef.current.clear();
     };
   }, [isLoaded]);
 

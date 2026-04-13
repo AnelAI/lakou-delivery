@@ -24,6 +24,8 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
   const headingMarkerRef = useRef<import("leaflet").Marker | null>(null);
   const deliveryMarkersRef = useRef<import("leaflet").Layer[]>([]);
   const routeLinesRef = useRef<import("leaflet").Layer[]>([]);
+  const trailPointsRef = useRef<[number, number][]>([]);
+  const trailLineRef = useRef<import("leaflet").Polyline | null>(null);
 
   // Initialize map
   useEffect(() => {
@@ -104,6 +106,24 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
           html: svg, iconSize: [40, 40], iconAnchor: [20, 20], className: "",
         });
         headingMarkerRef.current = L.marker(latlng, { icon, interactive: false }).addTo(map);
+      }
+
+      // GPS trail — append position and keep last 200 points
+      trailPointsRef.current.push(latlng);
+      if (trailPointsRef.current.length > 200) trailPointsRef.current.shift();
+
+      if (trailPointsRef.current.length >= 2) {
+        if (trailLineRef.current) {
+          trailLineRef.current.setLatLngs(trailPointsRef.current);
+        } else {
+          trailLineRef.current = L.polyline(trailPointsRef.current, {
+            color: "#3b82f6",
+            weight: 4,
+            opacity: 0.55,
+            lineCap: "round",
+            lineJoin: "round",
+          }).addTo(map);
+        }
       }
 
       // Pan map to follow courier (smooth)
