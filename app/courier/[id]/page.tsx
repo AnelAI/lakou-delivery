@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, use, useCallback } from "react";
 import type { Courier, Delivery } from "@/lib/types";
 import { useGpsTracking } from "@/lib/useGpsTracking";
 import { haversineDistance } from "@/lib/geo";
-import { getSocket } from "@/lib/socket-client";
+import { getPusherClient, courierChannel, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import {
   Wifi, WifiOff, Navigation, Package, CheckCircle,
   Clock, MapPin, Phone, AlertTriangle, Download,
@@ -57,15 +57,20 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
     // Persist courier ID for quick re-access
     localStorage.setItem("lakou_courier_id", id);
 
-    // Listen for new delivery assignments
-    const socket = getSocket();
-    socket.emit("courier:join", id);
-    socket.on("deliveries:updated", fetchDeliveries);
-    socket.on("deliveries:new", fetchDeliveries);
+    // Listen for delivery updates via Pusher
+    const client = getPusherClient();
+    const adminCh = client.subscribe(ADMIN_CHANNEL);
+    adminCh.bind(EVENTS.DELIVERIES_UPDATED, fetchDeliveries);
+    adminCh.bind(EVENTS.DELIVERIES_NEW, fetchDeliveries);
+
+    const courierCh = client.subscribe(courierChannel(id));
+    courierCh.bind(EVENTS.DELIVERY_ASSIGNED, fetchDeliveries);
 
     return () => {
-      socket.off("deliveries:updated", fetchDeliveries);
-      socket.off("deliveries:new", fetchDeliveries);
+      adminCh.unbind(EVENTS.DELIVERIES_UPDATED, fetchDeliveries);
+      adminCh.unbind(EVENTS.DELIVERIES_NEW, fetchDeliveries);
+      client.unsubscribe(ADMIN_CHANNEL);
+      client.unsubscribe(courierChannel(id));
     };
   }, [id, fetchDeliveries]);
 
