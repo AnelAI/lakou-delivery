@@ -1,4 +1,18 @@
 export type CourierStatus = "offline" | "available" | "busy" | "paused";
+
+export interface Merchant {
+  id: string;
+  osmId?: string | null;
+  name: string;
+  category: string;
+  address?: string | null;
+  lat: number;
+  lng: number;
+  phone?: string | null;
+  website?: string | null;
+  active: boolean;
+  createdAt: string;
+}
 export type DeliveryStatus = "pending" | "assigned" | "picked_up" | "delivered" | "cancelled";
 export type AlertType = "unauthorized_pause" | "route_deviation" | "speed_violation" | "offline";
 export type AlertSeverity = "info" | "warning" | "critical";
@@ -33,6 +47,8 @@ export interface Delivery {
   deliveryLng: number;
   notes?: string | null;
   category?: string | null;
+  merchantId?: string | null;
+  merchant?: { id: string; name: string; address?: string | null } | null;
   status: DeliveryStatus;
   courierId?: string | null;
   courier?: { id: string; name: string; phone: string } | null;

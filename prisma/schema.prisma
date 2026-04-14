@@ -25,9 +25,24 @@ model Courier {
   createdAt   DateTime @default(now())
 }
 
+model Merchant {
+  id        String     @id @default(uuid())
+  osmId     String?    @unique
+  name      String
+  category  String
+  address   String?
+  lat       Float
+  lng       Float
+  phone     String?
+  website   String?
+  active    Boolean    @default(true)
+  deliveries Delivery[]
+  createdAt DateTime   @default(now())
+}
+
 model Delivery {
-  id              String   @id @default(uuid())
-  orderNumber     String   @unique
+  id              String    @id @default(uuid())
+  orderNumber     String    @unique
   customerName    String
   customerPhone   String
   pickupAddress   String
@@ -38,16 +53,18 @@ model Delivery {
   deliveryLng     Float
   notes           String?
   category        String?
-  status          String   @default("pending")
+  merchantId      String?
+  merchant        Merchant? @relation(fields: [merchantId], references: [id])
+  status          String    @default("pending")
   courierId       String?
-  courier         Courier? @relation(fields: [courierId], references: [id])
-  priority        Int      @default(0)
+  courier         Courier?  @relation(fields: [courierId], references: [id])
+  priority        Int       @default(0)
   estimatedTime   Int?
   distance        Float?
   assignedAt      DateTime?
   pickedUpAt      DateTime?
   deliveredAt     DateTime?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime  @default(now())
 }
 
 model CourierLocation {
