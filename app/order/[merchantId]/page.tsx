@@ -4,24 +4,46 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Phone, MapPin, Package, Send, Navigation,
-  ChevronLeft, CheckCircle, ChevronRight, Globe, AlertCircle,
+  Phone, MapPin, Navigation, ChevronLeft, CheckCircle,
+  ChevronRight, Globe, Star, Clock, Send, X, Flame,
 } from "lucide-react";
 import type { Merchant } from "@/lib/types";
 
 const MANAGER_PHONE = process.env.NEXT_PUBLIC_MANAGER_PHONE || "+21629461250";
 
-const CATEGORIES: Record<string, { label: string; emoji: string; grad: string }> = {
-  restaurant:  { label: "Restaurant",  emoji: "🍽️", grad: "from-orange-400 to-amber-400" },
-  patisserie:  { label: "Pâtisserie",  emoji: "🧁", grad: "from-pink-400   to-rose-400"  },
-  boucherie:   { label: "Boucherie",   emoji: "🥩", grad: "from-red-400    to-rose-500"  },
-  volaillerie: { label: "Volaillerie", emoji: "🐔", grad: "from-yellow-400 to-orange-400"},
-  fromagerie:  { label: "Fromagerie",  emoji: "🧀", grad: "from-amber-400  to-yellow-400"},
-  supermarche: { label: "Supermarché", emoji: "🛒", grad: "from-green-400  to-emerald-400"},
-  pharmacie:   { label: "Pharmacie",   emoji: "💊", grad: "from-blue-400   to-cyan-400"  },
-  eau:         { label: "Pack d'eau",  emoji: "💧", grad: "from-cyan-400   to-sky-400"   },
-  course:      { label: "Course",      emoji: "📦", grad: "from-purple-400 to-violet-400"},
+const CAT_META: Record<string, { label: string; emoji: string }> = {
+  restaurant:  { label: "Restaurant",  emoji: "🍽️" },
+  patisserie:  { label: "Pâtisserie",  emoji: "🧁" },
+  boucherie:   { label: "Boucherie",   emoji: "🥩" },
+  volaillerie: { label: "Volaillerie", emoji: "🐔" },
+  fromagerie:  { label: "Fromagerie",  emoji: "🧀" },
+  supermarche: { label: "Supermarché", emoji: "🛒" },
+  pharmacie:   { label: "Pharmacie",   emoji: "💊" },
+  eau:         { label: "Pack d'eau",  emoji: "💧" },
+  course:      { label: "Course",      emoji: "📦" },
 };
+
+const GRADIENTS: Record<string, [string, string]> = {
+  restaurant:  ["#FF6B35", "#F7B731"],
+  patisserie:  ["#FC5C7D", "#6A3093"],
+  boucherie:   ["#C0392B", "#E74C3C"],
+  volaillerie: ["#F39C12", "#F1C40F"],
+  fromagerie:  ["#E67E22", "#F39C12"],
+  supermarche: ["#27AE60", "#2ECC71"],
+  pharmacie:   ["#2980B9", "#3498DB"],
+  eau:         ["#00B4DB", "#0083B0"],
+  course:      ["#8E44AD", "#9B59B6"],
+};
+
+function merchantRating(id: string): string {
+  const n = (id.charCodeAt(0) * 13 + id.charCodeAt(1) * 7) % 12;
+  return (3.8 + n * 0.1).toFixed(1);
+}
+function deliveryRange(id: string): string {
+  const n = (id.charCodeAt(2) * 11 + id.charCodeAt(3) * 5) % 20;
+  const lo = 15 + n;
+  return `${lo}–${lo + 10} min`;
+}
 
 const BIZERTE_LOCATIONS = [
   { name: "Centre-ville Bizerte",  lat: 37.2744, lng: 9.8739 },
@@ -40,18 +62,17 @@ const BIZERTE_LOCATIONS = [
   { name: "Ghezala",               lat: 37.1500, lng: 9.6167 },
 ];
 
-type Step = "info" | "form" | "success";
+type Step = "detail" | "order" | "success";
 
 export default function MerchantPage({ params }: { params: Promise<{ merchantId: string }> }) {
   const { merchantId } = use(params);
   const router = useRouter();
 
   const [merchant, setMerchant] = useState<Merchant | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [step, setStep]         = useState<Step>("info");
+  const [step, setStep]         = useState<Step>("detail");
   const [orderNumber, setOrderNumber] = useState("");
 
-  // Form state
+  // Form
   const [customerName,    setCustomerName]    = useState("");
   const [customerPhone,   setCustomerPhone]   = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -65,7 +86,7 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
 
   useEffect(() => {
     fetch(`/api/merchants/${merchantId}`)
-      .then((r) => { if (r.status === 404) { setNotFound(true); return null; } return r.json(); })
+      .then((r) => r.ok ? r.json() : null)
       .then((d: Merchant | null) => { if (d) setMerchant(d); });
   }, [merchantId]);
 
@@ -87,25 +108,18 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deliveryLat) { setError("Sélectionnez une adresse de livraison"); return; }
+    if (!deliveryLat) { setError("Sélectionnez une adresse"); return; }
     setSubmitting(true); setError("");
     try {
       const res = await fetch("/api/deliveries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerName,
-          customerPhone,
+          customerName, customerPhone,
           pickupAddress: merchant!.address || merchant!.name,
-          pickupLat:     merchant!.lat,
-          pickupLng:     merchant!.lng,
-          deliveryAddress,
-          deliveryLat:   parseFloat(deliveryLat),
-          deliveryLng:   parseFloat(deliveryLng),
-          notes,
-          category:   merchant!.category,
-          merchantId: merchant!.id,
-          priority:   0,
+          pickupLat: merchant!.lat, pickupLng: merchant!.lng,
+          deliveryAddress, deliveryLat: parseFloat(deliveryLat), deliveryLng: parseFloat(deliveryLng),
+          notes, category: merchant!.category, merchantId: merchant!.id, priority: 0,
         }),
       });
       if (!res.ok) { const d = await res.json(); setError(d.error || "Erreur"); return; }
@@ -116,216 +130,291 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
     finally { setSubmitting(false); }
   };
 
-  const cat  = merchant ? CATEGORIES[merchant.category] : null;
-  const grad = cat?.grad ?? "from-gray-400 to-gray-500";
-
-  const inputClass = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white";
-
-  // ── Loading ──────────────────────────────────────────────────────────────
-  if (!merchant && !notFound) {
+  if (!merchant) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#F6F6F6] flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  if (notFound) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-3xl p-8 text-center max-w-sm w-full shadow-xl">
-          <AlertCircle size={48} className="text-red-400 mx-auto mb-4" />
-          <h2 className="font-bold text-gray-800 mb-4">Marchand introuvable</h2>
-          <Link href="/order" className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-orange-600">
-            <ChevronLeft size={16} /> Retour
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const cat     = CAT_META[merchant.category] ?? { label: "Marchand", emoji: "🏪" };
+  const [c1, c2] = GRADIENTS[merchant.category] ?? ["#636e72", "#b2bec3"];
+  const rating  = merchantRating(merchant.id);
+  const time    = deliveryRange(merchant.id);
 
   // ── Success ──────────────────────────────────────────────────────────────
   if (step === "success") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-[#F6F6F6] flex flex-col items-center justify-center p-6">
         <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-sm text-center">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={40} className="text-green-500" />
+            <CheckCircle size={44} className="text-green-500" />
           </div>
-          <div className="text-4xl mb-2">{cat?.emoji}</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-1">Commande envoyée !</h2>
-          <p className="text-gray-500 text-sm mb-2">depuis <span className="font-semibold text-orange-600">{merchant!.name}</span></p>
-          <div className="bg-orange-50 rounded-2xl p-4 mb-6">
-            <p className="text-xs text-orange-600 font-medium mb-1">Numéro de commande</p>
-            <p className="text-lg font-bold text-orange-700 font-mono">{orderNumber}</p>
+          <div className="text-5xl mb-3">{cat.emoji}</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">Commande envoyée !</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            depuis <span className="font-semibold">{merchant.name}</span>
+          </p>
+          <div className="bg-gray-50 rounded-2xl p-4 mb-6">
+            <p className="text-xs text-gray-500 mb-1">Numéro de commande</p>
+            <p className="text-xl font-bold text-gray-900 font-mono">{orderNumber}</p>
           </div>
           <button
             onClick={() => router.push(`/track/${orderNumber}`)}
-            className="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 mb-3"
+            className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-base hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 mb-3 active:scale-95"
           >
             <MapPin size={18} /> Suivre ma commande <ChevronRight size={16} />
           </button>
-          <a href={`tel:${MANAGER_PHONE}`} className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 py-3 rounded-xl text-sm hover:bg-gray-50">
-            <Phone size={16} /> Appeler Motaz
+          <a href={`tel:${MANAGER_PHONE}`}
+            className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 py-3.5 rounded-2xl text-sm font-semibold hover:bg-gray-50 transition-colors">
+            <Phone size={15} /> Contacter Motaz
           </a>
         </div>
       </div>
     );
   }
 
-  // ── Merchant info ────────────────────────────────────────────────────────
+  // ── Main page ─────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F6F6F6]">
 
-      {/* Hero header */}
-      <div className={`bg-gradient-to-br ${grad} relative`}>
-        <div className="px-4 pt-10 pb-6 max-w-sm mx-auto">
-          <Link href="/order" className="inline-flex items-center gap-1 text-white/80 text-sm mb-4 hover:text-white">
-            <ChevronLeft size={16} /> Retour
-          </Link>
-          <div className="flex items-start gap-4">
-            <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center text-5xl backdrop-blur-sm flex-shrink-0 shadow-lg">
-              {cat?.emoji ?? "🏪"}
-            </div>
-            <div className="flex-1 min-w-0 pt-1">
-              <span className="inline-block bg-white/25 text-white text-xs font-semibold px-2.5 py-1 rounded-full mb-2 backdrop-blur-sm">
-                {cat?.label}
-              </span>
-              <h1 className="text-white font-bold text-xl leading-tight line-clamp-2">
-                {merchant!.name}
-              </h1>
-            </div>
-          </div>
+      {/* ── Full-width hero ─────────────────────────────────────────────── */}
+      <div
+        className="relative w-full"
+        style={{
+          height: 260,
+          background: `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`,
+        }}
+      >
+        {/* pattern */}
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: "radial-gradient(circle at 20% 80%, white 1.5px, transparent 1.5px), radial-gradient(circle at 80% 20%, white 1.5px, transparent 1.5px)",
+            backgroundSize: "50px 50px",
+          }}
+        />
+
+        {/* Back button */}
+        <Link
+          href="/order"
+          className="absolute top-12 left-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors z-10"
+        >
+          <ChevronLeft size={20} className="text-gray-800" />
+        </Link>
+
+        {/* Emoji centered */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[90px] drop-shadow-2xl">{cat.emoji}</span>
         </div>
-        {/* Wave shape */}
-        <div className="h-6 bg-gray-50 rounded-t-3xl" />
+
+        {/* Bottom fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#F6F6F6] to-transparent" />
       </div>
 
-      <div className="max-w-sm mx-auto px-4 -mt-2 pb-8 space-y-4">
+      {/* ── Info sheet ──────────────────────────────────────────────────── */}
+      <div className="max-w-lg mx-auto px-4 -mt-4 pb-10 space-y-4">
 
-        {/* Info card */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3">
-          {merchant!.address && (
-            <div className="flex items-start gap-3 text-sm">
-              <MapPin size={16} className="text-orange-500 mt-0.5 flex-shrink-0" />
-              <span className="text-gray-700">{merchant!.address}</span>
+        {/* Title card */}
+        <div className="bg-white rounded-3xl p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-1">
+                {merchant.name}
+              </h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className="text-xs font-bold px-3 py-1 rounded-full text-white"
+                  style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}
+                >
+                  {cat.emoji} {cat.label}
+                </span>
+                {(merchant.id.charCodeAt(0) % 3 === 0) && (
+                  <span className="flex items-center gap-1 text-xs font-semibold text-orange-500 bg-orange-50 px-2.5 py-1 rounded-full">
+                    <Flame size={10} /> Populaire
+                  </span>
+                )}
+              </div>
             </div>
-          )}
-          {merchant!.phone && (
-            <a href={`tel:${merchant!.phone}`} className="flex items-center gap-3 text-sm hover:text-orange-600 transition-colors">
-              <Phone size={16} className="text-green-500 flex-shrink-0" />
-              <span className="text-gray-700">{merchant!.phone}</span>
-            </a>
-          )}
-          {merchant!.website && (
-            <a href={merchant!.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm hover:text-blue-600 transition-colors">
-              <Globe size={16} className="text-blue-500 flex-shrink-0" />
-              <span className="text-gray-700 truncate">{merchant!.website}</span>
-            </a>
-          )}
-        </div>
+          </div>
 
-        {/* Static OSM map tile */}
-        <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-          <img
-            src={`https://staticmap.openstreetmap.de/staticmap.php?center=${merchant!.lat},${merchant!.lng}&zoom=16&size=600x200&markers=${merchant!.lat},${merchant!.lng},red-marker`}
-            alt={`Localisation de ${merchant!.name}`}
-            className="w-full h-36 object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-          <div className="px-4 py-2.5 text-xs text-gray-500 flex items-center gap-1">
-            <MapPin size={11} className="text-orange-500" />
-            {merchant!.lat.toFixed(4)}, {merchant!.lng.toFixed(4)} — données © OpenStreetMap
+          {/* Stats row */}
+          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 text-amber-500 font-bold text-lg mb-0.5">
+                <Star size={16} fill="currentColor" />
+                {rating}
+              </div>
+              <p className="text-xs text-gray-400">Note</p>
+            </div>
+            <div className="text-center border-x border-gray-100">
+              <div className="font-bold text-gray-900 text-lg mb-0.5">{time.split("–")[0]}<span className="text-sm">min</span></div>
+              <p className="text-xs text-gray-400">Livraison</p>
+            </div>
+            <div className="text-center">
+              <div className="font-bold text-gray-900 text-lg mb-0.5">0 DT</div>
+              <p className="text-xs text-gray-400">Frais</p>
+            </div>
           </div>
         </div>
 
-        {/* CTA or Form */}
-        {step === "info" && (
+        {/* Info card */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+          {merchant.address && (
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <MapPin size={15} className="text-orange-500" />
+              </div>
+              <p className="text-sm text-gray-700">{merchant.address}</p>
+            </div>
+          )}
+          {merchant.phone && (
+            <a href={`tel:${merchant.phone}`} className="flex items-center gap-3 group">
+              <div className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Phone size={15} className="text-green-500" />
+              </div>
+              <p className="text-sm text-gray-700 group-hover:text-green-600 transition-colors">{merchant.phone}</p>
+            </a>
+          )}
+          {merchant.website && (
+            <a href={merchant.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group">
+              <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Globe size={15} className="text-blue-500" />
+              </div>
+              <p className="text-sm text-gray-700 group-hover:text-blue-600 truncate transition-colors">{merchant.website}</p>
+            </a>
+          )}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Clock size={15} className="text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-700">Livraison estimée : <span className="font-semibold text-gray-900">{time}</span></p>
+          </div>
+        </div>
+
+        {/* ── CTA / Order form ──────────────────────────────────────────── */}
+        {step === "detail" && (
           <button
-            onClick={() => setStep("form")}
-            className={`w-full bg-gradient-to-r ${grad} text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-3`}
+            onClick={() => setStep("order")}
+            className="w-full bg-gray-900 text-white py-5 rounded-2xl font-bold text-lg hover:bg-gray-800 active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl"
           >
-            <Package size={20} />
-            Commander depuis {cat?.emoji} {merchant!.name}
+            <span className="text-2xl">{cat.emoji}</span>
+            Commander ici
+            <ChevronRight size={20} />
           </button>
         )}
 
-        {step === "form" && (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center gap-2 mb-1">
-              <div className={`w-8 h-8 bg-gradient-to-br ${grad} rounded-xl flex items-center justify-center text-lg`}>
-                {cat?.emoji}
+        {step === "order" && (
+          <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+            {/* Form header */}
+            <div
+              className="px-5 py-4 flex items-center justify-between"
+              style={{ background: `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)` }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{cat.emoji}</span>
+                <div>
+                  <p className="text-white font-bold text-base leading-tight">{merchant.name}</p>
+                  <p className="text-white/80 text-xs">{time} · Livraison gratuite</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-bold text-gray-800">{merchant!.name}</p>
-                <p className="text-xs text-gray-400">Collecte à cette adresse</p>
-              </div>
-            </div>
-
-            {/* Customer info */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nom complet *</label>
-                <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Mohamed Ben Ali" required className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Téléphone *</label>
-                <input type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="+216 XX XXX XXX" required className={inputClass} />
-              </div>
-            </div>
-
-            {/* Delivery address */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-orange-100 space-y-3">
-              <h3 className="text-sm font-semibold text-orange-700 flex items-center gap-2">
-                <MapPin size={14} /> Adresse de livraison *
-              </h3>
-              <button type="button" onClick={useGPS} disabled={gpsLoading}
-                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed text-sm font-medium transition-all
-                  ${deliveryAddress === "Ma position GPS" ? "border-green-400 bg-green-50 text-green-700" : "border-orange-300 bg-orange-50 text-orange-600 hover:border-orange-400"}`}>
-                <Navigation size={15} className={gpsLoading ? "animate-spin" : ""} />
-                {gpsLoading ? "Localisation..." : deliveryAddress === "Ma position GPS" ? `GPS activé (±${gpsAccuracy}m)` : "Utiliser ma position GPS"}
+              <button
+                onClick={() => setStep("detail")}
+                className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+              >
+                <X size={16} className="text-white" />
               </button>
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <div className="h-px flex-1 bg-gray-100" />ou choisir un quartier<div className="h-px flex-1 bg-gray-100" />
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-5 space-y-5">
+
+              {/* Customer */}
+              <div className="space-y-3">
+                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Vos coordonnées</h3>
+                <input
+                  type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Nom complet *" required
+                  className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition-colors"
+                />
+                <input
+                  type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="Téléphone *" required
+                  className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition-colors"
+                />
               </div>
-              <select className={inputClass}
-                value={deliveryAddress !== "Ma position GPS" ? deliveryAddress : ""}
-                onChange={(e) => {
-                  const loc = BIZERTE_LOCATIONS.find((l) => l.name === e.target.value);
-                  if (loc) { setDeliveryAddress(loc.name); setDeliveryLat(String(loc.lat)); setDeliveryLng(String(loc.lng)); setGpsAccuracy(null); }
-                }}>
-                <option value="">Sélectionner un quartier...</option>
-                {BIZERTE_LOCATIONS.map((loc) => (
-                  <option key={loc.name} value={loc.name}>{loc.name}</option>
-                ))}
-              </select>
-            </div>
 
-            {/* Notes */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Instructions (optionnel)</label>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-                placeholder="Fragile, sonner à l'entrée..." rows={3} className={`${inputClass} resize-none`} />
-            </div>
+              {/* Delivery address */}
+              <div className="space-y-3">
+                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Adresse de livraison</h3>
+                <button
+                  type="button" onClick={useGPS} disabled={gpsLoading}
+                  className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 text-sm font-semibold transition-all
+                    ${deliveryAddress === "Ma position GPS"
+                      ? "border-green-400 bg-green-50 text-green-700"
+                      : "border-dashed border-gray-300 bg-gray-50 text-gray-600 hover:border-orange-400 hover:text-orange-600"}`}
+                >
+                  <Navigation size={15} className={gpsLoading ? "animate-spin" : ""} />
+                  {gpsLoading ? "Localisation..."
+                    : deliveryAddress === "Ma position GPS" ? `Position GPS (±${gpsAccuracy}m)`
+                    : "Utiliser ma position GPS"}
+                </button>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                    <span className="text-gray-400 text-xs">ou</span>
+                  </div>
+                  <select
+                    className="w-full bg-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition-colors appearance-none"
+                    value={deliveryAddress !== "Ma position GPS" ? deliveryAddress : ""}
+                    onChange={(e) => {
+                      const loc = BIZERTE_LOCATIONS.find((l) => l.name === e.target.value);
+                      if (loc) { setDeliveryAddress(loc.name); setDeliveryLat(String(loc.lat)); setDeliveryLng(String(loc.lng)); setGpsAccuracy(null); }
+                    }}
+                  >
+                    <option value="">Choisir un quartier...</option>
+                    {BIZERTE_LOCATIONS.map((loc) => <option key={loc.name} value={loc.name}>{loc.name}</option>)}
+                  </select>
+                </div>
+              </div>
 
-            {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">{error}</div>}
+              {/* Notes */}
+              <div className="space-y-2">
+                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Instructions</h3>
+                <textarea
+                  value={notes} onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Fragilité, code portail, étage..."
+                  rows={2}
+                  className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition-colors resize-none"
+                />
+              </div>
 
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setStep("info")}
-                className="flex items-center gap-1 px-4 py-3 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors">
-                <ChevronLeft size={16} /> Retour
-              </button>
-              <button type="submit" disabled={submitting || !deliveryLat}
-                className={`flex-1 bg-gradient-to-r ${grad} text-white py-3 rounded-xl font-bold shadow-md hover:opacity-95 active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center gap-2`}>
+              {error && (
+                <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100 flex items-center gap-2">
+                  <X size={14} className="flex-shrink-0" /> {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting || !deliveryLat}
+                className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-base hover:bg-gray-800 active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg"
+              >
                 {submitting
-                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Envoi...</>
-                  : <><Send size={16} /> Confirmer la commande</>}
+                  ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Envoi...</>
+                  : <><Send size={18} /> Confirmer la commande</>}
               </button>
-            </div>
-          </form>
+            </form>
+          </div>
         )}
+
+        {/* Call manager */}
+        <a
+          href={`tel:${MANAGER_PHONE}`}
+          className="flex items-center justify-center gap-2 w-full bg-white border border-gray-200 text-gray-700 py-4 rounded-2xl font-semibold hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <Phone size={16} />
+          Appeler Motaz directement
+        </a>
       </div>
     </div>
   );
