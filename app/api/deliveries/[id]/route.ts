@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { haversineDistance, estimateTravelTime } from "@/lib/geo";
-import { pusher, ADMIN_CHANNEL, courierChannel, EVENTS } from "@/lib/pusher";
+import { pusher, ADMIN_CHANNEL, courierChannel, orderChannel, EVENTS } from "@/lib/pusher";
 
 export async function GET(
   req: NextRequest,
@@ -98,6 +98,8 @@ export async function PATCH(
     });
 
     await pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_UPDATED, delivery);
+    // Notify customer tracking page
+    await pusher.trigger(orderChannel(delivery.orderNumber), EVENTS.DELIVERY_STATUS_UPDATE, delivery);
 
     return NextResponse.json(delivery);
   } catch (error) {

@@ -11,7 +11,7 @@ import { AddCourierForm } from "@/components/courier/AddCourierForm";
 import { AddDeliveryForm } from "@/components/delivery/AddDeliveryForm";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import {
-  Bell, RefreshCw, MapPin, Settings, Users, Package, Map,
+  Bell, RefreshCw, MapPin, Users, Package, Map, LayoutDashboard,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -159,10 +159,17 @@ export default function Dashboard() {
           </Link>
           <Link
             href="/couriers"
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Gérer les coursiers"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <Settings size={15} />
+            <LayoutDashboard size={14} />
+            Coursiers
+          </Link>
+          <Link
+            href="/couriers"
+            className="sm:hidden p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="Tableau de bord coursiers"
+          >
+            <LayoutDashboard size={18} />
           </Link>
         </div>
       </nav>

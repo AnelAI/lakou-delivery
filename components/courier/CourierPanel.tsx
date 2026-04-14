@@ -5,6 +5,7 @@ import type { Courier } from "@/lib/types";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import Link from "next/link";
 import {
   Phone,
   MapPin,
@@ -14,6 +15,7 @@ import {
   WifiOff,
   AlertTriangle,
   Bike,
+  LayoutDashboard,
 } from "lucide-react";
 
 interface Props {
@@ -169,27 +171,37 @@ export function CourierPanel({ couriers, selectedId, onSelect, onAdd }: Props) {
       </div>
 
       {/* Summary footer */}
-      <div className="p-3 border-t border-gray-200 bg-gray-50">
-        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-          <div>
-            <div className="font-semibold text-green-600">
-              {couriers.filter((c) => c.status === "available").length}
+      <div className="border-t border-gray-200 bg-gray-50">
+        <div className="p-3">
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div>
+              <div className="font-semibold text-green-600">
+                {couriers.filter((c) => c.status === "available").length}
+              </div>
+              <div className="text-gray-500">Disponibles</div>
             </div>
-            <div className="text-gray-500">Disponibles</div>
-          </div>
-          <div>
-            <div className="font-semibold text-blue-600">
-              {couriers.filter((c) => c.status === "busy").length}
+            <div>
+              <div className="font-semibold text-blue-600">
+                {couriers.filter((c) => c.status === "busy").length}
+              </div>
+              <div className="text-gray-500">En course</div>
             </div>
-            <div className="text-gray-500">En course</div>
-          </div>
-          <div>
-            <div className="font-semibold text-gray-500">
-              {couriers.filter((c) => c.status === "offline").length}
+            <div>
+              <div className="font-semibold text-gray-500">
+                {couriers.filter((c) => c.status === "offline").length}
+              </div>
+              <div className="text-gray-500">Hors ligne</div>
             </div>
-            <div className="text-gray-500">Hors ligne</div>
           </div>
         </div>
+        <Link
+          href="/couriers"
+          className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          <LayoutDashboard size={15} />
+          Tableau de bord complet
+          <ChevronRight size={14} />
+        </Link>
       </div>
     </div>
   );
