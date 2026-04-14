@@ -32,6 +32,7 @@ export interface Delivery {
   deliveryLat: number;
   deliveryLng: number;
   notes?: string | null;
+  category?: string | null;
   status: DeliveryStatus;
   courierId?: string | null;
   courier?: { id: string; name: string; phone: string } | null;

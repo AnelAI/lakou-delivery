@@ -16,6 +16,30 @@ import {
   Truck,
 } from "lucide-react";
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  restaurant:  "🍽️",
+  patisserie:  "🧁",
+  boucherie:   "🥩",
+  volaillerie: "🐔",
+  fromagerie:  "🧀",
+  supermarche: "🛒",
+  pharmacie:   "💊",
+  eau:         "💧",
+  course:      "📦",
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  restaurant:  "Restaurant",
+  patisserie:  "Pâtisserie",
+  boucherie:   "Boucherie",
+  volaillerie: "Volaillerie",
+  fromagerie:  "Fromagerie",
+  supermarche: "Supermarché",
+  pharmacie:   "Pharmacie",
+  eau:         "Pack d'eau",
+  course:      "Course",
+};
+
 interface Props {
   deliveries: Delivery[];
   couriers: Courier[];
@@ -102,10 +126,15 @@ export function DeliveryPanel({ deliveries, couriers, onAssign, onStatusChange, 
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-mono text-gray-500">
                         {delivery.orderNumber}
                       </span>
+                      {delivery.category && (
+                        <span className="text-xs bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded-full border border-orange-100">
+                          {CATEGORY_EMOJI[delivery.category] ?? "📦"} {CATEGORY_LABEL[delivery.category] ?? delivery.category}
+                        </span>
+                      )}
                       {delivery.priority > 0 && (
                         <span className="text-xs bg-red-100 text-red-600 px-1 rounded">
                           Prioritaire

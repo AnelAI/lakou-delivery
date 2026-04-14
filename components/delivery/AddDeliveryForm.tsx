@@ -39,6 +39,7 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
     deliveryLng: "",
     notes: "",
     priority: "0",
+    category: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -92,7 +93,7 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
       setForm({
         customerName: "", customerPhone: "", pickupAddress: "",
         pickupLat: "", pickupLng: "", deliveryAddress: "",
-        deliveryLat: "", deliveryLng: "", notes: "", priority: "0",
+        deliveryLat: "", deliveryLng: "", notes: "", priority: "0", category: "",
       });
       onSuccess();
       onClose();
@@ -184,6 +185,27 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
               Coordonnées: {parseFloat(form.deliveryLat).toFixed(4)}, {parseFloat(form.deliveryLng).toFixed(4)}
             </p>
           )}
+        </div>
+
+        {/* Category */}
+        <div>
+          <label className={labelClass}>Catégorie</label>
+          <select
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+            className={inputClass}
+          >
+            <option value="">— Sans catégorie —</option>
+            <option value="restaurant">🍽️ Restaurant</option>
+            <option value="patisserie">🧁 Pâtisserie</option>
+            <option value="boucherie">🥩 Boucherie</option>
+            <option value="volaillerie">🐔 Volaillerie</option>
+            <option value="fromagerie">🧀 Fromagerie</option>
+            <option value="supermarche">🛒 Supermarché</option>
+            <option value="pharmacie">💊 Pharmacie</option>
+            <option value="eau">💧 Pack d&apos;eau</option>
+            <option value="course">📦 Course</option>
+          </select>
         </div>
 
         {/* Priority & notes */}

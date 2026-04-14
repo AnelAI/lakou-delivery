@@ -37,6 +37,7 @@ model Delivery {
   deliveryLat     Float
   deliveryLng     Float
   notes           String?
+  category        String?
   status          String   @default("pending")
   courierId       String?
   courier         Courier? @relation(fields: [courierId], references: [id])

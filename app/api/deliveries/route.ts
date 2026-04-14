@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       customerName, customerPhone, pickupAddress, pickupLat, pickupLng,
-      deliveryAddress, deliveryLat, deliveryLng, notes, priority,
+      deliveryAddress, deliveryLat, deliveryLng, notes, priority, category,
     } = body;
 
     if (
@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
         pickupAddress, pickupLat, pickupLng,
         deliveryAddress, deliveryLat, deliveryLng,
         notes: notes || null,
+        category: category || null,
         priority: priority || 0,
       },
     });
