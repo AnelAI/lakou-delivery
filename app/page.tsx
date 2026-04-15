@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Courier, Delivery, Alert, Stats, LocationUpdate } from "@/lib/types";
 import { CourierPanel } from "@/components/courier/CourierPanel";
 import { DeliveryPanel } from "@/components/delivery/DeliveryPanel";
@@ -11,7 +11,7 @@ import { AddCourierForm } from "@/components/courier/AddCourierForm";
 import { AddDeliveryForm } from "@/components/delivery/AddDeliveryForm";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import {
-  Bell, RefreshCw, MapPin, Users, Package, Map, LayoutDashboard, Store,
+  Bell, RefreshCw, MapPin, Users, Package, Map as MapIcon, LayoutDashboard, Store,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -42,10 +42,35 @@ export default function Dashboard() {
     activeAlerts: 0,
   });
   const [selectedCourierId, setSelectedCourierId] = useState<string | null>(null);
+  const [visibleCourierIds, setVisibleCourierIds] = useState<Set<string>>(new Set()); // empty = all
   const [showAddCourier, setShowAddCourier] = useState(false);
   const [showAddDelivery, setShowAddDelivery] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mobileTab, setMobileTab] = useState<MobileTab>("map");
+
+  // Stable color per courier (assigned in chronological order)
+  const PALETTE = [
+    "#ef4444","#f97316","#eab308","#22c55e","#14b8a6",
+    "#3b82f6","#8b5cf6","#ec4899","#06b6d4","#84cc16",
+    "#f43f5e","#a855f7","#0ea5e9","#10b981","#fb923c",
+  ];
+  const courierColors = useMemo(() => {
+    const sorted = [...couriers].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const m = new globalThis.Map<string, string>();
+    sorted.forEach((c, i) => m.set(c.id, PALETTE[i % PALETTE.length]));
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [couriers.map((c) => c.id).join(",")]);
+
+  const toggleCourierVisible = (id: string) =>
+    setVisibleCourierIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  const showAllCouriers  = () => setVisibleCourierIds(new Set());
+  const hideAllCouriers  = () =>
+    setVisibleCourierIds(new Set(couriers.filter((c) => c.status !== "offline").map((c) => c.id)));
 
   const fetchAll = useCallback(async () => {
     try {
@@ -212,6 +237,11 @@ export default function Dashboard() {
             selectedId={selectedCourierId}
             onSelect={(c) => setSelectedCourierId(c.id === selectedCourierId ? null : c.id)}
             onAdd={() => setShowAddCourier(true)}
+            courierColors={courierColors}
+            visibleIds={visibleCourierIds}
+            onToggleVisible={toggleCourierVisible}
+            onShowAll={showAllCouriers}
+            onHideAll={hideAllCouriers}
           />
         </div>
 
@@ -222,6 +252,8 @@ export default function Dashboard() {
             deliveries={deliveries}
             selectedCourierId={selectedCourierId}
             onCourierClick={(c) => setSelectedCourierId(c.id)}
+            courierColors={courierColors}
+            visibleIds={visibleCourierIds}
           />
           <AlertBanner initialAlerts={activeAlerts} />
         </div>
@@ -248,9 +280,9 @@ export default function Dashboard() {
                 couriers={couriers}
                 deliveries={deliveries}
                 selectedCourierId={selectedCourierId}
-                onCourierClick={(c) => {
-                  setSelectedCourierId(c.id);
-                }}
+                onCourierClick={(c) => { setSelectedCourierId(c.id); }}
+                courierColors={courierColors}
+                visibleIds={visibleCourierIds}
               />
               <AlertBanner initialAlerts={activeAlerts} />
             </div>
@@ -266,6 +298,11 @@ export default function Dashboard() {
                   setMobileTab("map");
                 }}
                 onAdd={() => setShowAddCourier(true)}
+                courierColors={courierColors}
+                visibleIds={visibleCourierIds}
+                onToggleVisible={toggleCourierVisible}
+                onShowAll={showAllCouriers}
+                onHideAll={hideAllCouriers}
               />
             </div>
           )}
@@ -291,7 +328,7 @@ export default function Dashboard() {
               mobileTab === "map" ? "text-blue-600" : "text-gray-500"
             }`}
           >
-            <Map size={20} />
+            <MapIcon size={20} />
             <span>Carte</span>
           </button>
 

@@ -4,25 +4,26 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { Courier, Delivery, LocationUpdate } from "@/lib/types";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import { getOsrmRoute, getOsrmTrip } from "@/lib/osrm";
-import { Eye, EyeOff, Users } from "lucide-react";
 
 interface Props {
   couriers: Courier[];
   deliveries: Delivery[];
   selectedCourierId?: string | null;
   onCourierClick?: (courier: Courier) => void;
+  courierColors: Map<string, string>;  // courierId → hex color
+  visibleIds: Set<string>;             // empty = all visible
 }
 
 const DEFAULT_CENTER: [number, number] = [37.2744, 9.8739];
 
-const STATUS_COLOR: Record<string, string> = {
+const STATUS_DOT: Record<string, string> = {
   available: "#22c55e",
   busy:      "#3b82f6",
   paused:    "#eab308",
   offline:   "#6b7280",
 };
 
-export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourierClick }: Props) {
+export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourierClick, courierColors, visibleIds }: Props) {
   const mapRef          = useRef<HTMLDivElement>(null);
   const mapInstanceRef  = useRef<unknown>(null);
   const markersRef      = useRef<Map<string, unknown>>(new Map());
@@ -32,12 +33,7 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
   const routeCacheRef   = useRef<Map<string, [number, number][]>>(new Map());
   const courierRoutesRef = useRef<Map<string, unknown>>(new Map()); // deliveryId → polyline
 
-  const [isLoaded, setIsLoaded]         = useState(false);
-  const [showFilter, setShowFilter]     = useState(false);
-  // Empty set = show all. Non-empty = show only these IDs.
-  const [visibleIds, setVisibleIds]     = useState<Set<string>>(new Set());
-
-  const activeCouriers = couriers.filter((c) => c.status !== "offline");
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const isVisible = useCallback(
     (courierId: string | null | undefined) =>
@@ -45,21 +41,16 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
     [visibleIds]
   );
 
-  const toggleCourier = (id: string) => {
-    setVisibleIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const selectAll  = () => setVisibleIds(new Set());
-  const hideAll    = () => setVisibleIds(new Set(activeCouriers.map((c) => c.id)));
+  // Get the map color for a courier (falls back to status-based color)
+  const courierColor = useCallback(
+    (courierId: string, status?: string) =>
+      courierColors.get(courierId) ?? STATUS_DOT[status ?? "offline"] ?? "#6b7280",
+    [courierColors]
+  );
 
   // ── Icon factories ──────────────────────────────────────────────────────────
   const createCourierIcon = useCallback((L: typeof import("leaflet"), courier: Courier) => {
-    const color   = STATUS_COLOR[courier.status] ?? "#6b7280";
+    const color   = courierColor(courier.id, courier.status);
     const hasAlert = courier.alerts && courier.alerts.length > 0;
     const svg = `
       <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
@@ -69,7 +60,7 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
         <polygon points="20,46 13,30 27,30" fill="${color}"/>
       </svg>`;
     return L.divIcon({ html: svg, iconSize: [40, 50], iconAnchor: [20, 50], popupAnchor: [0, -50], className: "" });
-  }, []);
+  }, [courierColor]);
 
   const createDeliveryIcon = useCallback((L: typeof import("leaflet"), type: "pickup" | "delivery") => {
     const color = type === "pickup" ? "#8b5cf6" : "#f97316";
@@ -314,9 +305,8 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
           const courier = couriers.find((c) => c.id === courierId);
           const courierName = courier?.name ?? "";
 
-          // Optimized route polyline (green while picking up, orange while delivering)
-          const allPickedUp = trip.orderedDeliveries.every((d) => d.status === "picked_up");
-          const routeColor = allPickedUp ? "#f97316" : "#22c55e";
+          // Optimized route polyline — use courier's palette color
+          const routeColor = courierColors.get(courierId) ?? "#22c55e";
 
           if (trip.geometry.length >= 2) {
             const line = L.polyline(trip.geometry, {
@@ -343,7 +333,7 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
             .filter((d) => d.status === "assigned")
             .forEach((d, idx) => {
               const m = L.marker([d.pickupLat, d.pickupLng], {
-                icon: stopIcon(idx + 1, "#8b5cf6"),
+                icon: stopIcon(idx + 1, routeColor),
                 opacity,
               })
                 .addTo(map)
@@ -438,7 +428,7 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
       import("leaflet").then((L) => {
         const map    = mapInstanceRef.current as import("leaflet").Map;
         const latlng: [number, number] = [data.lat, data.lng];
-        const color  = STATUS_COLOR[data.status] ?? "#6b7280";
+        const color  = courierColors.get(data.courierId) ?? STATUS_DOT[data.status] ?? "#6b7280";
 
         const marker = markersRef.current.get(data.courierId);
         if (marker) {
@@ -522,83 +512,23 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
       )}
       <div ref={mapRef} className="w-full h-full" />
 
-      {/* ── Courier filter panel ── */}
-      {isLoaded && activeCouriers.length > 0 && (
-        <div className="absolute top-3 right-3 z-[500]">
-          <button
-            onClick={() => setShowFilter((v) => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-lg transition-colors ${
-              visibleIds.size > 0
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-700 border border-gray-200"
-            }`}
-            title="Filtrer par coursier"
-          >
-            <Users size={13} />
-            {visibleIds.size > 0 ? `${visibleIds.size} / ${activeCouriers.length}` : "Tous"}
-          </button>
-
-          {showFilter && (
-            <div className="mt-1.5 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 min-w-[200px]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-gray-700">Coursiers actifs</span>
-                <div className="flex gap-2">
-                  <button onClick={selectAll} className="text-xs text-blue-500 hover:underline flex items-center gap-0.5">
-                    <Eye size={10} /> Tous
-                  </button>
-                  <button onClick={hideAll} className="text-xs text-gray-400 hover:underline flex items-center gap-0.5">
-                    <EyeOff size={10} /> Aucun
-                  </button>
-                </div>
+      {/* ── Legend: one line per visible courier ── */}
+      {isLoaded && couriers.some((c) => c.status !== "offline") && (
+        <div className="absolute bottom-6 left-3 z-[500] bg-white/90 backdrop-blur-sm rounded-xl shadow border border-gray-100 px-3 py-2 text-xs space-y-1 max-w-[180px]">
+          {couriers
+            .filter((c) => c.status !== "offline" && isVisible(c.id))
+            .map((c) => (
+              <div key={c.id} className="flex items-center gap-1.5">
+                <span
+                  className="w-5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ background: courierColors.get(c.id) ?? "#6b7280" }}
+                />
+                <span className="text-gray-700 truncate">{c.name}</span>
               </div>
-              <div className="space-y-1">
-                {activeCouriers.map((c) => {
-                  const checked = visibleIds.size === 0 || visibleIds.has(c.id);
-                  const color   = STATUS_COLOR[c.status] ?? "#6b7280";
-                  return (
-                    <label
-                      key={c.id}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleCourier(c.id)}
-                        className="rounded"
-                      />
-                      <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ background: color }}
-                      />
-                      <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{c.name}</span>
-                      <span className="text-xs text-gray-400">
-                        {c.status === "available" ? "libre" :
-                         c.status === "busy"      ? "en course" :
-                         c.status === "paused"    ? "pause" : ""}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Legend ── */}
-      {isLoaded && (
-        <div className="absolute bottom-6 left-3 z-[500] bg-white rounded-xl shadow border border-gray-100 px-3 py-2 text-xs space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-1 rounded" style={{ background: "#22c55e", display: "inline-block" }} />
-            <span className="text-gray-600">En route → collecte</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-1 rounded" style={{ background: "#f97316", display: "inline-block" }} />
-            <span className="text-gray-600">En route → livraison</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-1 rounded opacity-50" style={{ background: "#3b82f6", display: "inline-block", border: "1px dashed #3b82f6", height: 0 }} />
-            <span className="text-gray-600">Trajet collecte→livraison</span>
+            ))}
+          <div className="flex items-center gap-1.5 pt-0.5 border-t border-gray-100 mt-1">
+            <span className="w-5 h-px border-t-2 border-dashed border-gray-400 flex-shrink-0" />
+            <span className="text-gray-400">Réf. trajet</span>
           </div>
         </div>
       )}
