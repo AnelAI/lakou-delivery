@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback } from "react";
-import type { Courier, Delivery, Alert, Stats } from "@/lib/types";
+import type { Courier, Delivery, Alert, Stats, LocationUpdate } from "@/lib/types";
 import { CourierPanel } from "@/components/courier/CourierPanel";
 import { DeliveryPanel } from "@/components/delivery/DeliveryPanel";
 import { StatsBar } from "@/components/ui/StatsBar";
@@ -73,6 +73,16 @@ export default function Dashboard() {
     channel.bind(EVENTS.COURIERS_UPDATED, fetchAll);
     channel.bind(EVENTS.DELIVERIES_NEW, fetchAll);
     channel.bind(EVENTS.DELIVERIES_UPDATED, fetchAll);
+    // Live GPS: update only the moving courier's position in state
+    channel.bind(EVENTS.COURIER_LOCATION_UPDATE, (data: LocationUpdate) => {
+      setCouriers((prev) =>
+        prev.map((c) =>
+          c.id === data.courierId
+            ? { ...c, currentLat: data.lat, currentLng: data.lng, speed: data.speed, status: data.status }
+            : c
+        )
+      );
+    });
     channel.bind(EVENTS.ALERTS_NEW, (alert: Alert) => {
       setAlerts((prev) => [alert, ...prev]);
     });

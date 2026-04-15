@@ -238,7 +238,7 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
               uniqueDests[0].deliveryLng,
             ];
 
-            const cacheKey = `trip-${courierId}-${toPickup.map((d) => d.id).sort().join("-")}-${Math.round(pos[0] * 100)}`;
+            const cacheKey = `trip-${courierId}-${toPickup.map((d) => d.id).sort().join("-")}-${Math.round(pos[0] * 1000)}`;
             let trip;
             if (routeCacheRef.current.has(cacheKey)) {
               // cached as serialized TripResult
@@ -271,7 +271,7 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
             // add all delivery destinations
             for (const dd of uniqueDests) waypoints.push([dd.deliveryLat, dd.deliveryLng]);
 
-            const cacheKey = `route-${courierId}-${cDelivs.map((d) => d.id).sort().join("-")}-${Math.round(pos[0] * 100)}`;
+            const cacheKey = `route-${courierId}-${cDelivs.map((d) => d.id).sort().join("-")}-${Math.round(pos[0] * 1000)}`;
             if (routeCacheRef.current.has(cacheKey)) {
               geometry = routeCacheRef.current.get(cacheKey)!;
             } else {
@@ -471,6 +471,30 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
               lineJoin: "round",
             }).addTo(map);
             trailLinesRef.current.set(data.courierId, line);
+          }
+        }
+
+        // ── Live route: trim consumed path as courier moves ──────────────────
+        // Find the route polyline for this courier and shorten it from the front,
+        // keeping only the segment ahead of the courier's current position.
+        const routeLayer = courierRoutesRef.current.get(data.courierId);
+        if (routeLayer) {
+          const poly = routeLayer as import("leaflet").Polyline;
+          const pts  = poly.getLatLngs() as import("leaflet").LatLng[];
+          if (pts.length >= 2) {
+            const courierLatLng = L.latLng(data.lat, data.lng);
+            // Find the point on the route closest to the courier
+            let closestIdx = 0;
+            let closestDist = Infinity;
+            pts.forEach((p, i) => {
+              const d = courierLatLng.distanceTo(p);
+              if (d < closestDist) { closestDist = d; closestIdx = i; }
+            });
+            // Keep from that point forward, prepend exact courier position
+            const ahead = pts.slice(closestIdx);
+            if (ahead.length >= 1) {
+              poly.setLatLngs([courierLatLng, ...ahead]);
+            }
           }
         }
       });
