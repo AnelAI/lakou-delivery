@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Courier, Delivery, LocationUpdate } from "@/lib/types";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
-import { getOsrmRoute } from "@/lib/osrm";
+import { getOsrmRoute, getOsrmTrip } from "@/lib/osrm";
 import { Eye, EyeOff, Users } from "lucide-react";
 
 interface Props {
@@ -169,157 +169,246 @@ export function DeliveryMap({ couriers, deliveries, selectedCourierId, onCourier
     });
   }, [couriers, isLoaded, visibleIds, createCourierIcon, onCourierClick, isVisible]);
 
-  // ── Delivery markers + pickup↔delivery routes + courier→waypoint routes ─────
+  // ── Delivery markers + optimized multi-stop routes ─────────────────────────
   useEffect(() => {
     if (!isLoaded || !mapInstanceRef.current) return;
 
-    const active = deliveries.filter((d) => ["assigned", "picked_up", "pending"].includes(d.status));
+    const active = deliveries.filter((d) =>
+      ["assigned", "picked_up", "pending"].includes(d.status)
+    );
 
     const draw = async () => {
-      // Build courier lookup for position
+      // Courier GPS lookup
       const courierPos = new Map(
         couriers
           .filter((c) => c.currentLat && c.currentLng)
-          .map((c) => [c.id, { lat: c.currentLat!, lng: c.currentLng! }])
+          .map((c) => [c.id, [c.currentLat!, c.currentLng!] as [number, number]])
       );
 
-      // Pre-fetch all routes needed
-      const pickupDelivRoutes = new Map<string, [number, number][] | null>();
-      const courierWaypointRoutes = new Map<string, [number, number][] | null>();
+      // ── Group active deliveries by courier ──────────────────────────────────
+      // courierGroups[courierId] = array of their active deliveries
+      const courierGroups = new Map<string, typeof active>();
+      const pending: typeof active = [];
+
+      for (const d of active) {
+        if (!d.courierId) { pending.push(d); continue; }
+        if (!courierGroups.has(d.courierId)) courierGroups.set(d.courierId, []);
+        courierGroups.get(d.courierId)!.push(d);
+      }
+
+      // ── For each courier: compute optimized trip ────────────────────────────
+      // optimizedRoutes[courierId] = { geometry, stopOrder, distance, duration, orderedDeliveries }
+      type CourierTrip = {
+        geometry: [number, number][];
+        orderedDeliveries: typeof active;  // deliveries in visit order
+        distance: number;
+        duration: number;
+      };
+      const courierTrips = new Map<string, CourierTrip>();
 
       await Promise.all(
-        active.flatMap((d) => {
-          const tasks = [];
+        Array.from(courierGroups.entries()).map(async ([courierId, cDelivs]) => {
+          const pos = courierPos.get(courierId);
+          if (!pos) return; // courier offline, skip route
 
-          // Pickup → delivery route (for non-pending)
-          if (d.status !== "pending") {
-            const cacheKey = `pd-${d.id}-${d.status}`;
-            tasks.push(
-              (async () => {
-                if (routeCacheRef.current.has(cacheKey)) {
-                  pickupDelivRoutes.set(d.id, routeCacheRef.current.get(cacheKey)!);
-                } else {
-                  const r = await getOsrmRoute([
-                    [d.pickupLat, d.pickupLng],
-                    [d.deliveryLat, d.deliveryLng],
-                  ]);
-                  if (r) routeCacheRef.current.set(cacheKey, r);
-                  pickupDelivRoutes.set(d.id, r);
-                }
-              })()
+          // All deliveries already picked_up → heading directly to their destinations
+          // Mix of assigned + picked_up: pickups not yet done are stops, then deliveries
+          const toPickup   = cDelivs.filter((d) => d.status === "assigned");
+          const toDeliver  = cDelivs.filter((d) => d.status === "picked_up");
+
+          if (toPickup.length === 0 && toDeliver.length === 0) return;
+
+          // Unique delivery destinations (deduplicated by lat/lng)
+          const destKey = (d: (typeof active)[0]) => `${d.deliveryLat},${d.deliveryLng}`;
+          const uniqueDests = [...new Map(cDelivs.map((d) => [destKey(d), d])).values()];
+
+          let geometry: [number, number][] = [];
+          let orderedDeliveries: typeof active = [];
+          let distance = 0, duration = 0;
+
+          if (toPickup.length >= 2) {
+            // ── Multi-stop: optimize pickup order ──────────────────────────────
+            const pickupPoints = toPickup.map(
+              (d) => [d.pickupLat, d.pickupLng] as [number, number]
             );
+            // Use first unique delivery dest as final destination
+            // (handles the common case: all same client)
+            const finalDest: [number, number] = [
+              uniqueDests[0].deliveryLat,
+              uniqueDests[0].deliveryLng,
+            ];
+
+            const cacheKey = `trip-${courierId}-${toPickup.map((d) => d.id).sort().join("-")}-${Math.round(pos[0] * 100)}`;
+            let trip;
+            if (routeCacheRef.current.has(cacheKey)) {
+              // cached as serialized TripResult
+              const cached = routeCacheRef.current.get(cacheKey)!;
+              geometry = cached;
+              orderedDeliveries = toPickup; // use as-is for cache hit
+              return; // skip re-calculation (route already in cache)
+            }
+            trip = await getOsrmTrip(pos, pickupPoints, finalDest);
+
+            if (trip) {
+              geometry = trip.geometry;
+              distance = trip.distance;
+              duration = trip.duration;
+              // Reorder toPickup deliveries according to optimized stopOrder
+              orderedDeliveries = [
+                ...trip.stopOrder.map((i) => toPickup[i]),
+                ...toDeliver,
+              ];
+              if (geometry.length > 1) routeCacheRef.current.set(cacheKey, geometry);
+            } else {
+              // Fallback: keep original order
+              orderedDeliveries = [...toPickup, ...toDeliver];
+            }
+
+          } else {
+            // Single pickup or only deliveries: straight route
+            const waypoints: [number, number][] = [pos];
+            if (toPickup[0]) waypoints.push([toPickup[0].pickupLat, toPickup[0].pickupLng]);
+            // add all delivery destinations
+            for (const dd of uniqueDests) waypoints.push([dd.deliveryLat, dd.deliveryLng]);
+
+            const cacheKey = `route-${courierId}-${cDelivs.map((d) => d.id).sort().join("-")}-${Math.round(pos[0] * 100)}`;
+            if (routeCacheRef.current.has(cacheKey)) {
+              geometry = routeCacheRef.current.get(cacheKey)!;
+            } else {
+              geometry = (await getOsrmRoute(waypoints)) ?? waypoints;
+              if (geometry.length > 1) routeCacheRef.current.set(cacheKey, geometry);
+            }
+            orderedDeliveries = [...toPickup, ...toDeliver];
           }
 
-          // Courier → next waypoint (only when courier has GPS)
-          if (d.courierId && courierPos.has(d.courierId)) {
-            const pos = courierPos.get(d.courierId)!;
-            // assigned: heading to pickup — picked_up: heading to delivery
-            const [destLat, destLng] =
-              d.status === "picked_up"
-                ? [d.deliveryLat, d.deliveryLng]
-                : [d.pickupLat, d.pickupLng];
-
-            const cacheKey = `cw-${d.id}-${Math.round(pos.lat * 1000)}-${Math.round(pos.lng * 1000)}`;
-            tasks.push(
-              (async () => {
-                if (routeCacheRef.current.has(cacheKey)) {
-                  courierWaypointRoutes.set(d.id, routeCacheRef.current.get(cacheKey)!);
-                } else {
-                  const r = await getOsrmRoute([
-                    [pos.lat, pos.lng],
-                    [destLat, destLng],
-                  ]);
-                  if (r) routeCacheRef.current.set(cacheKey, r);
-                  courierWaypointRoutes.set(d.id, r);
-                }
-              })()
-            );
-          }
-
-          return tasks;
+          courierTrips.set(courierId, { geometry, orderedDeliveries, distance, duration });
         })
       );
 
+      // ── Draw everything ─────────────────────────────────────────────────────
       import("leaflet").then((L) => {
         const map = mapInstanceRef.current as import("leaflet").Map;
 
-        // Clear old delivery markers & delivery routes
         delivMarkersRef.current.forEach((m) => (m as import("leaflet").Layer).remove());
         delivMarkersRef.current = [];
-
-        // Clear old courier→waypoint lines
         courierRoutesRef.current.forEach((l) => (l as import("leaflet").Layer).remove());
         courierRoutesRef.current.clear();
 
-        active.forEach((d) => {
-          const visible  = isVisible(d.courierId);
-          const opacity  = visible ? 1 : 0.12;
-          const pickupIcon   = createDeliveryIcon(L, "pickup");
-          const delivIcon    = createDeliveryIcon(L, "delivery");
-          const courierName  = d.courier?.name ?? "";
+        // ── Helper: numbered stop icon ──────────────────────────────────────
+        const stopIcon = (num: number, color: string) =>
+          L.divIcon({
+            html: `<svg width="30" height="38" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="15" cy="13" r="11" fill="${color}" stroke="white" stroke-width="2"/>
+              <text x="15" y="18" font-size="11" font-weight="bold" text-anchor="middle" fill="white">${num}</text>
+              <polygon points="15,36 9,21 21,21" fill="${color}"/>
+            </svg>`,
+            iconSize: [30, 38], iconAnchor: [15, 38], popupAnchor: [0, -38], className: "",
+          });
 
-          const pm = L.marker([d.pickupLat, d.pickupLng], { icon: pickupIcon, opacity })
-            .addTo(map)
-            .bindPopup(`<div class="p-2"><div class="font-bold text-purple-700">📦 Collecte</div><div class="text-sm">${d.pickupAddress}</div><div class="text-xs text-gray-500">Client : ${d.customerName}</div>${courierName ? `<div class="text-xs text-blue-600 mt-1">🏍️ ${courierName}</div>` : ""}</div>`);
+        const delivIcon = createDeliveryIcon(L, "delivery");
 
-          const dm = L.marker([d.deliveryLat, d.deliveryLng], { icon: delivIcon, opacity })
-            .addTo(map)
-            .bindPopup(`<div class="p-2"><div class="font-bold text-orange-700">🏠 Livraison</div><div class="text-sm">${d.deliveryAddress}</div><div class="text-xs text-gray-500">${d.orderNumber}</div></div>`);
+        // ── Draw optimized routes for each courier ──────────────────────────
+        courierTrips.forEach((trip, courierId) => {
+          const visible = isVisible(courierId);
+          const opacity = visible ? 1 : 0.1;
+          const courier = couriers.find((c) => c.id === courierId);
+          const courierName = courier?.name ?? "";
 
-          delivMarkersRef.current.push(pm, dm);
+          // Optimized route polyline (green while picking up, orange while delivering)
+          const allPickedUp = trip.orderedDeliveries.every((d) => d.status === "picked_up");
+          const routeColor = allPickedUp ? "#f97316" : "#22c55e";
 
-          // Pickup ↔ delivery route (reference line, lighter)
-          if (d.status !== "pending") {
-            const roadRoute = pickupDelivRoutes.get(d.id);
-            const lineOpts = {
-              color: d.status === "picked_up" ? "#f97316" : "#3b82f6",
-              weight: 3,
-              opacity: visible ? 0.35 : 0.05,
-              lineCap: "round" as const,
-              lineJoin: "round" as const,
-              dashArray: "8 6",
-            };
-            const line = roadRoute && roadRoute.length >= 2
-              ? L.polyline(roadRoute, lineOpts).addTo(map)
-              : L.polyline([[d.pickupLat, d.pickupLng], [d.deliveryLat, d.deliveryLng]], { ...lineOpts, weight: 2 }).addTo(map);
-            delivMarkersRef.current.push(line);
-          }
-
-          // Courier → next waypoint (solid, animated-looking, prominent)
-          const cwRoute = courierWaypointRoutes.get(d.id);
-          if (cwRoute && cwRoute.length >= 2) {
-            const isPickingUp = d.status === "assigned";
-            const color = isPickingUp ? "#22c55e" : "#f97316";
-            const line = L.polyline(cwRoute, {
-              color,
+          if (trip.geometry.length >= 2) {
+            const line = L.polyline(trip.geometry, {
+              color: routeColor,
               weight: 5,
-              opacity: visible ? 0.85 : 0.05,
+              opacity: visible ? 0.88 : 0.05,
               lineCap: "round",
               lineJoin: "round",
             }).addTo(map);
-            // Tooltip on hover
-            line.bindTooltip(
-              isPickingUp ? `🏍️ → 📦 En route vers collecte (${courierName})` : `🏍️ → 🏠 En route vers livraison (${courierName})`,
-              { sticky: true }
-            );
-            courierRoutesRef.current.set(d.id, line);
-          } else if (d.courierId && couriers.find((c) => c.id === d.courierId)?.currentLat) {
-            // Fallback straight line
-            const pos = courierPos.get(d.courierId!);
-            if (pos) {
-              const [destLat, destLng] =
-                d.status === "picked_up"
-                  ? [d.deliveryLat, d.deliveryLng]
-                  : [d.pickupLat, d.pickupLng];
-              const line = L.polyline([[pos.lat, pos.lng], [destLat, destLng]], {
-                color: d.status === "picked_up" ? "#f97316" : "#22c55e",
-                weight: 4,
-                opacity: visible ? 0.6 : 0.05,
-                dashArray: "4 4",
-              }).addTo(map);
-              courierRoutesRef.current.set(d.id, line);
-            }
+
+            const distKm = trip.distance > 0 ? (trip.distance / 1000).toFixed(1) + " km" : "";
+            const durMin = trip.duration > 0 ? Math.round(trip.duration / 60) + " min" : "";
+            const label = [
+              `🏍️ ${courierName}`,
+              `${trip.orderedDeliveries.length} arrêt(s)`,
+              distKm, durMin,
+            ].filter(Boolean).join(" · ");
+            line.bindTooltip(label, { sticky: true });
+            courierRoutesRef.current.set(courierId, line);
           }
+
+          // Numbered pickup markers (in visit order)
+          trip.orderedDeliveries
+            .filter((d) => d.status === "assigned")
+            .forEach((d, idx) => {
+              const m = L.marker([d.pickupLat, d.pickupLng], {
+                icon: stopIcon(idx + 1, "#8b5cf6"),
+                opacity,
+              })
+                .addTo(map)
+                .bindPopup(
+                  `<div class="p-2">
+                    <div class="font-bold text-purple-700">📦 Collecte #${idx + 1}</div>
+                    <div class="text-sm">${d.pickupAddress}</div>
+                    <div class="text-xs text-gray-500">Client : ${d.customerName}</div>
+                    ${d.notes ? `<div class="text-xs text-gray-600 mt-1">📝 ${d.notes}</div>` : ""}
+                    <div class="text-xs text-blue-600 mt-1">🏍️ ${courierName}</div>
+                  </div>`
+                );
+              delivMarkersRef.current.push(m);
+            });
+
+          // Delivery destination markers (unique)
+          const seen = new Set<string>();
+          trip.orderedDeliveries.forEach((d) => {
+            const key = `${d.deliveryLat},${d.deliveryLng}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            const dm = L.marker([d.deliveryLat, d.deliveryLng], { icon: delivIcon, opacity })
+              .addTo(map)
+              .bindPopup(
+                `<div class="p-2">
+                  <div class="font-bold text-orange-700">🏠 Livraison</div>
+                  <div class="text-sm">${d.deliveryAddress}</div>
+                  <div class="text-xs text-gray-500">${d.customerName} · ${d.orderNumber}</div>
+                </div>`
+              );
+            delivMarkersRef.current.push(dm);
+          });
+        });
+
+        // ── Draw pending deliveries (no courier) ────────────────────────────
+        const pickupIcon = createDeliveryIcon(L, "pickup");
+        pending.forEach((d) => {
+          const pm = L.marker([d.pickupLat, d.pickupLng], { icon: pickupIcon })
+            .addTo(map)
+            .bindPopup(
+              `<div class="p-2"><div class="font-bold text-purple-700">📦 En attente</div><div class="text-sm">${d.pickupAddress}</div><div class="text-xs text-gray-500">${d.customerName}</div></div>`
+            );
+          const dm = L.marker([d.deliveryLat, d.deliveryLng], { icon: delivIcon })
+            .addTo(map)
+            .bindPopup(
+              `<div class="p-2"><div class="font-bold text-orange-700">🏠 Destination</div><div class="text-sm">${d.deliveryAddress}</div></div>`
+            );
+          // Simple dashed line for pending
+          const line = L.polyline(
+            [[d.pickupLat, d.pickupLng], [d.deliveryLat, d.deliveryLng]],
+            { color: "#9ca3af", weight: 2, opacity: 0.4, dashArray: "5 5" }
+          ).addTo(map);
+          delivMarkersRef.current.push(pm, dm, line);
+        });
+
+        // ── Draw routes for assigned couriers without GPS (static ref lines) ─
+        courierGroups.forEach((cDelivs, courierId) => {
+          if (courierTrips.has(courierId)) return; // already handled
+          cDelivs.forEach((d) => {
+            const line = L.polyline(
+              [[d.pickupLat, d.pickupLng], [d.deliveryLat, d.deliveryLng]],
+              { color: "#3b82f6", weight: 2, opacity: 0.3, dashArray: "6 4" }
+            ).addTo(map);
+            delivMarkersRef.current.push(line);
+          });
         });
       });
     };
