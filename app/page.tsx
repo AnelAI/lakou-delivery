@@ -192,6 +192,25 @@ export default function Dashboard() {
               </span>
             )}
           </Link>
+
+          {/* ── Courses button — toujours visible sur mobile ── */}
+          <button
+            onClick={() => setMobileTab("deliveries")}
+            className={`md:hidden relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+              mobileTab === "deliveries"
+                ? "bg-orange-500 text-white"
+                : "bg-orange-50 text-orange-600 border border-orange-200"
+            }`}
+          >
+            <Package size={16} />
+            Courses
+            {pendingDeliveries > 0 && (
+              <span className="w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center leading-none font-bold">
+                {pendingDeliveries > 9 ? "9+" : pendingDeliveries}
+              </span>
+            )}
+          </button>
+
           <Link
             href="/marchands"
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors"
