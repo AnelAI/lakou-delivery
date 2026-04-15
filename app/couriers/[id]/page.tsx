@@ -7,7 +7,7 @@ import { fr } from "date-fns/locale";
 import {
   ArrowLeft, TrendingUp, Clock, Package, DollarSign,
   Calendar, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
-  Phone, Bike,
+  Phone, Bike, Smartphone, RefreshCw,
 } from "lucide-react";
 
 interface DeliveryRow {
@@ -82,6 +82,8 @@ export default function CourierDetailPage({ params }: { params: Promise<{ id: st
   const [stats, setStats]       = useState<Stats | null>(null);
   const [loading, setLoading]   = useState(true);
   const [historyOpen, setHistoryOpen] = useState(true);
+  const [liveOpen, setLiveOpen]       = useState(true);
+  const [iframeKey, setIframeKey]     = useState(0);
   const [period, setPeriod]     = useState<"today" | "week" | "month" | "all">("week");
 
   useEffect(() => {
@@ -262,6 +264,87 @@ export default function CourierDetailPage({ params }: { params: Promise<{ id: st
               );
             })}
           </div>
+        </div>
+
+        {/* ── Live courier dashboard preview ─────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <button
+            onClick={() => setLiveOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+          >
+            <span className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <Smartphone size={15} className="text-blue-500" />
+              Vue en direct — dashboard coursier
+              <span className="inline-flex items-center gap-1 text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                Live
+              </span>
+            </span>
+            <div className="flex items-center gap-2">
+              {liveOpen && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setIframeKey((k) => k + 1); }}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+                  title="Recharger"
+                >
+                  <RefreshCw size={14} />
+                </button>
+              )}
+              {liveOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+            </div>
+          </button>
+
+          {liveOpen && (
+            <div className="px-4 pb-5 pt-1">
+              <p className="text-xs text-gray-400 mb-4">
+                Aperçu de l&apos;écran que voit le coursier sur son téléphone — les courses et la carte se mettent à jour en temps réel.
+              </p>
+              {/* Phone frame */}
+              <div className="flex justify-center">
+                <div className="relative" style={{ width: 375 }}>
+                  {/* Phone shell */}
+                  <div className="bg-gray-900 rounded-[40px] p-3 shadow-2xl border border-gray-700">
+                    {/* Notch */}
+                    <div className="bg-black rounded-[32px] overflow-hidden" style={{ height: 680 }}>
+                      {/* Status bar mock */}
+                      <div className="bg-gray-900 flex items-center justify-between px-5 py-2 flex-shrink-0">
+                        <span className="text-white text-xs font-semibold">
+                          {new Date().getHours()}:{String(new Date().getMinutes()).padStart(2, "0")}
+                        </span>
+                        <div className="w-20 h-5 bg-black rounded-full mx-auto" />
+                        <div className="flex items-center gap-1">
+                          <svg width="16" height="12" viewBox="0 0 16 12" fill="white">
+                            <rect x="0" y="4" width="3" height="8" rx="1" />
+                            <rect x="4.5" y="2.5" width="3" height="9.5" rx="1" />
+                            <rect x="9" y="1" width="3" height="11" rx="1" />
+                            <rect x="13.5" y="0" width="2.5" height="12" rx="1" />
+                          </svg>
+                          <svg width="15" height="12" viewBox="0 0 15 12" fill="white">
+                            <rect x="1" y="1" width="11" height="9" rx="2" stroke="white" strokeWidth="1.5" fill="none" />
+                            <rect x="12" y="3.5" width="2.5" height="5" rx="1" fill="white" />
+                            <rect x="2.5" y="2.5" width="8" height="6" rx="1" fill="white" />
+                          </svg>
+                        </div>
+                      </div>
+                      {/* Iframe content */}
+                      <iframe
+                        key={iframeKey}
+                        src={`/courier/${id}`}
+                        className="w-full border-0"
+                        style={{ height: 640 }}
+                        title="Dashboard coursier en temps réel"
+                        sandbox="allow-scripts allow-same-origin allow-forms"
+                      />
+                    </div>
+                  </div>
+                  {/* Home indicator */}
+                  <div className="flex justify-center mt-2">
+                    <div className="w-32 h-1 bg-gray-600 rounded-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── History ────────────────────────────────────────────────────── */}
