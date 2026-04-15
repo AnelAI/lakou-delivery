@@ -1,4 +1,4 @@
-const CACHE_NAME = "lakou-courier-v1";
+const CACHE_NAME = "lakou-v2";
 const STATIC_ASSETS = [
   "/",
   "/globals.css",

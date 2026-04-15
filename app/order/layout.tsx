@@ -19,5 +19,11 @@ export const viewport: Viewport = {
 };
 
 export default function OrderLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      {/* Override manifest + apple icon for the customer app */}
+      {/* These go into <head> via Next.js metadata — extra tags below */}
+      {children}
+    </>
+  );
 }

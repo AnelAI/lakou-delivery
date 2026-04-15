@@ -37,14 +37,26 @@ export default function RootLayout({
     <html lang="fr" className={`${geistSans.variable} h-full antialiased`}>
       <head>
         <link rel="manifest" href="/manifest-admin.json" />
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Lakou Admin" />
         <link
           rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           crossOrigin=""
         />
+        {/* Service Worker registration */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .catch(function(e) { console.warn('SW registration failed', e); });
+            });
+          }
+        `}} />
       </head>
       <body className="h-full flex flex-col">{children}</body>
     </html>
