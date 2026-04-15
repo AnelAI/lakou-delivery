@@ -16,6 +16,7 @@ import {
   Power,
   CheckCircle,
   Share2,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -133,7 +134,7 @@ export default function CouriersPage() {
                   <StatusBadge type="courier" value={courier.status} />
                 </div>
 
-                {/* Stats */}
+                {/* Stats du jour */}
                 <div className="grid grid-cols-4 gap-2 mb-4 text-center">
                   <div className="bg-gray-50 rounded-lg p-2">
                     <div className="text-lg font-bold text-blue-600">
@@ -141,23 +142,23 @@ export default function CouriersPage() {
                     </div>
                     <div className="text-xs text-gray-500">En cours</div>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-2">
+                  <div className="bg-blue-50 rounded-lg p-2">
+                    <div className="text-lg font-bold text-blue-700">
+                      {courier.deliveredToday ?? 0}
+                    </div>
+                    <div className="text-xs text-blue-500">Auj.</div>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-2">
                     <div className="text-lg font-bold text-green-600">
                       {courier.deliveredCount ?? 0}
                     </div>
-                    <div className="text-xs text-gray-500">Livrées</div>
+                    <div className="text-xs text-gray-500">Total</div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-2">
                     <div className="text-lg font-bold text-red-500">
                       {courier.alerts?.length ?? 0}
                     </div>
                     <div className="text-xs text-gray-500">Alertes</div>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-2">
-                    <div className="text-lg font-bold text-gray-600">
-                      {Math.round(courier.speed ?? 0)}
-                    </div>
-                    <div className="text-xs text-gray-500">km/h</div>
                   </div>
                 </div>
 
@@ -226,20 +227,27 @@ export default function CouriersPage() {
                 {/* Action links */}
                 <div className="mt-2 flex gap-2">
                   <Link
+                    href={`/couriers/${courier.id}`}
+                    className="flex-1 flex items-center justify-center gap-1 text-xs text-purple-700 hover:text-purple-900 py-1.5 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors font-semibold"
+                  >
+                    <CheckCircle size={12} />
+                    Voir détail
+                  </Link>
+                  <Link
                     href={`/courier/${courier.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 flex items-center justify-center gap-1 text-xs text-blue-600 hover:text-blue-800 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                   >
                     <Power size={12} />
-                    Lien tracking
+                    Tracking
                   </Link>
                   <button
                     onClick={() => shareWhatsApp(courier.id, courier.name)}
                     className="flex-1 flex items-center justify-center gap-1 text-xs text-green-700 hover:text-green-900 py-1.5 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
                   >
                     <Share2 size={12} />
-                    WhatsApp
+                    WA
                   </button>
                 </div>
               </div>

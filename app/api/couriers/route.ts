@@ -4,6 +4,9 @@ import { pusher, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher";
 
 export async function GET() {
   try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     const couriers = await prisma.courier.findMany({
       include: {
         deliveries: {
@@ -23,9 +26,23 @@ export async function GET() {
       },
       orderBy: { name: "asc" },
     });
+
+    // Get today's delivered count per courier in one query
+    const todayCounts = await prisma.delivery.groupBy({
+      by: ["courierId"],
+      where: {
+        status: "delivered",
+        deliveredAt: { gte: todayStart },
+        courierId: { not: null },
+      },
+      _count: { id: true },
+    });
+    const todayMap = new Map(todayCounts.map((r) => [r.courierId!, r._count.id]));
+
     const result = couriers.map(({ _count, ...c }) => ({
       ...c,
       deliveredCount: _count.deliveries,
+      deliveredToday: todayMap.get(c.id) ?? 0,
     }));
     return NextResponse.json(result);
   } catch (error) {

@@ -65,6 +65,26 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    // Check courier exists
+    const courier = await prisma.courier.findUnique({ where: { id } });
+    if (!courier) {
+      return NextResponse.json({ error: "Courier not found" }, { status: 404 });
+    }
+
+    // 1. Unlink deliveries (keep them, just remove courier assignment)
+    await prisma.delivery.updateMany({
+      where: { courierId: id },
+      data: { courierId: null, status: "pending", assignedAt: null },
+    });
+
+    // 2. Delete alerts for this courier
+    await prisma.alert.deleteMany({ where: { courierId: id } });
+
+    // 3. Delete GPS location history
+    await prisma.courierLocation.deleteMany({ where: { courierId: id } });
+
+    // 4. Delete the courier
     await prisma.courier.delete({ where: { id } });
 
     await pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIERS_UPDATED, {});
