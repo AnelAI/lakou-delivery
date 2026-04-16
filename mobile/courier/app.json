@@ -2,7 +2,12 @@
   "expo": {
     "name": "Lakou Coursier",
     "slug": "lakou-courier",
-    "owner": "lakou-delivery",
+    "owner": "raedlakoud",
+    "extra": {
+      "eas": {
+        "projectId": "c14912be-5955-4ad0-b505-6042babe5d33"
+      }
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -28,6 +33,11 @@
         "backgroundColor": "#1d4ed8"
       },
       "package": "com.lakou.courier",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBvANkdsA1owMJVlF-nmg1mfKZGWDKBTRM"
+        }
+      },
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -55,7 +65,15 @@
           "color": "#1d4ed8"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

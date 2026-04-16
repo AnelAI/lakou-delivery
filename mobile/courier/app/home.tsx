@@ -5,7 +5,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import MapView, { Marker, Polyline, UrlTile, Circle } from "react-native-maps";
+import MapView, { Marker, Polyline, Circle, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -207,6 +207,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
           {mapExpanded && (
             <MapView
+              provider={PROVIDER_GOOGLE}
               style={styles.map}
               region={{
                 latitude: position?.lat ?? 37.2746,
@@ -216,11 +217,6 @@ export default function HomeScreen() {
               }}
               showsUserLocation={false}
             >
-              <UrlTile
-                urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                maximumZ={19}
-                flipY={false}
-              />
               {/* Courier position */}
               {position && (
                 <Marker coordinate={{ latitude: position.lat, longitude: position.lng }} anchor={{ x: 0.5, y: 0.5 }}>

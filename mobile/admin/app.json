@@ -2,7 +2,7 @@
   "expo": {
     "name": "Lakou Admin",
     "slug": "lakou-admin",
-    "owner": "lakou-delivery",
+    "owner": "raedlakoud",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -28,9 +28,27 @@
       "bundler": "metro",
       "output": "static"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25"
+          }
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "777032f1-6293-43b4-8b7b-a4d31f354114"
+      }
     }
   }
 }
