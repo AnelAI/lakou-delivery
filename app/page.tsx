@@ -11,9 +11,10 @@ import { AddCourierForm } from "@/components/courier/AddCourierForm";
 import { AddDeliveryForm } from "@/components/delivery/AddDeliveryForm";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import {
-  Bell, RefreshCw, MapPin, Users, Package, Map as MapIcon, LayoutDashboard, Store,
+  Bell, RefreshCw, MapPin, Users, Package, Map as MapIcon, LayoutDashboard, Store, LogOut,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const DeliveryMap = dynamic(
   () => import("@/components/map/DeliveryMap").then((m) => m.DeliveryMap),
@@ -30,6 +31,7 @@ const DeliveryMap = dynamic(
 type MobileTab = "map" | "couriers" | "deliveries";
 
 export default function Dashboard() {
+  const router = useRouter();
   const [couriers, setCouriers] = useState<Courier[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -47,6 +49,11 @@ export default function Dashboard() {
   const [showAddDelivery, setShowAddDelivery] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mobileTab, setMobileTab] = useState<MobileTab>("map");
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   // Stable color per courier (assigned in chronological order)
   const PALETTE = [
@@ -239,6 +246,13 @@ export default function Dashboard() {
           >
             <LayoutDashboard size={18} />
           </Link>
+          <button
+            onClick={handleLogout}
+            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="Se déconnecter"
+          >
+            <LogOut size={15} />
+          </button>
         </div>
       </nav>
 
