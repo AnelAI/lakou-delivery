@@ -2,6 +2,7 @@
   "expo": {
     "name": "Lakou Coursier",
     "slug": "lakou-courier",
+    "owner": "lakou-delivery",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

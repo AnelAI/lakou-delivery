@@ -2,6 +2,7 @@
   "expo": {
     "name": "Better Call Motaz",
     "slug": "better-call-motaz",
+    "owner": "lakou-delivery",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
