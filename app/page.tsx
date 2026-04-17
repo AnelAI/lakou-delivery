@@ -11,10 +11,11 @@ import { AddCourierForm } from "@/components/courier/AddCourierForm";
 import { AddDeliveryForm } from "@/components/delivery/AddDeliveryForm";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import {
-  Bell, RefreshCw, MapPin, Users, Package, Map as MapIcon, LayoutDashboard, Store, LogOut,
+  Bell, RefreshCw, Users, Package, Map as MapIcon, LayoutDashboard, Store, LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LakouLogo } from "@/components/ui/LakouLogo";
 
 const DeliveryMap = dynamic(
   () => import("@/components/map/DeliveryMap").then((m) => m.DeliveryMap),
@@ -166,10 +167,7 @@ export default function Dashboard() {
       <nav className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between z-50 flex-shrink-0 gap-2">
         {/* Logo */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <MapPin size={15} className="text-white" />
-          </div>
-          <span className="font-bold text-gray-800 text-base hidden sm:block">Lakou Delivery</span>
+          <LakouLogo size={34} variant="full" />
           <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Admin</span>
         </div>
 

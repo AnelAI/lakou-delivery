@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Lock } from "lucide-react";
+import { LakouLogo } from "@/components/ui/LakouLogo";
 
 function LoginForm() {
   const router = useRouter();
@@ -41,11 +42,7 @@ function LoginForm() {
     <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-4">
-            <span className="text-3xl">🏍️</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white">Lakou Delivery</h1>
-          <p className="text-blue-300 text-sm mt-1">Administration</p>
+          <LakouLogo variant="login" />
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
