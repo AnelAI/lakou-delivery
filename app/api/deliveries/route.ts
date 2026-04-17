@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_NEW, delivery);
+    pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_NEW, delivery).catch(console.error);
 
     return NextResponse.json(delivery, { status: 201 });
   } catch (error) {

@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       data: { name, phone, photo: photo || null },
     });
 
-    await pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIERS_UPDATED, {});
+    pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIERS_UPDATED, {}).catch(console.error);
 
     return NextResponse.json(courier, { status: 201 });
   } catch (error) {

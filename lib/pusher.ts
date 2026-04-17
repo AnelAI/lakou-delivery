@@ -2,10 +2,10 @@ import Pusher from "pusher";
 
 // Server-side Pusher instance — used in API routes to trigger events
 export const pusher = new Pusher({
-  appId:   process.env.PUSHER_APP_ID!,
-  key:     process.env.NEXT_PUBLIC_PUSHER_KEY!,
-  secret:  process.env.PUSHER_SECRET!,
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+  appId:   (process.env.PUSHER_APP_ID   ?? "").trim(),
+  key:     (process.env.NEXT_PUBLIC_PUSHER_KEY     ?? "").trim(),
+  secret:  (process.env.PUSHER_SECRET   ?? "").trim(),
+  cluster: (process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? "").trim(),
   useTLS:  true,
 });
 

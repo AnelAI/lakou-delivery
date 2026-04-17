@@ -19,7 +19,7 @@ export async function PATCH(
       include: { courier: { select: { id: true, name: true } } },
     });
 
-    await pusher.trigger(ADMIN_CHANNEL, EVENTS.ALERTS_UPDATED, alert);
+    pusher.trigger(ADMIN_CHANNEL, EVENTS.ALERTS_UPDATED, alert).catch(console.error);
 
     return NextResponse.json(alert);
   } catch {

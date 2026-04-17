@@ -71,10 +71,10 @@ export async function POST(req: NextRequest) {
                 },
               });
 
-              await pusher.trigger(ADMIN_CHANNEL, EVENTS.ALERTS_NEW, {
+              pusher.trigger(ADMIN_CHANNEL, EVENTS.ALERTS_NEW, {
                 ...alert,
                 courier: { name: courier.name },
-              });
+              }).catch(console.error);
             }
           }
         }
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Broadcast live position to admin dashboard
-    await pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIER_LOCATION_UPDATE, {
+    pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIER_LOCATION_UPDATE, {
       courierId,
       lat,
       lng,
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       name: courier.name,
       status: updatedCourier.status,
       timestamp: new Date().toISOString(),
-    });
+    }).catch(console.error);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -50,7 +50,7 @@ export async function PATCH(
       data: body,
     });
 
-    await pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIERS_UPDATED, {});
+    pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIERS_UPDATED, {}).catch(console.error);
 
     return NextResponse.json(courier);
   } catch (error) {
@@ -87,7 +87,7 @@ export async function DELETE(
     // 4. Delete the courier
     await prisma.courier.delete({ where: { id } });
 
-    await pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIERS_UPDATED, {});
+    pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIERS_UPDATED, {}).catch(console.error);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -61,10 +61,10 @@ export async function PATCH(
         });
 
         // Push notification to the specific courier
-        await pusher.trigger(courierChannel(courierId), EVENTS.DELIVERY_ASSIGNED, {
+        pusher.trigger(courierChannel(courierId), EVENTS.DELIVERY_ASSIGNED, {
           delivery: { ...updateData, id },
           message: `Nouvelle course : ${delivery.pickupAddress} → ${delivery.deliveryAddress}`,
-        });
+        }).catch(console.error);
       }
     } else if (action === "pickup") {
       updateData = { ...updateData, status: "picked_up", pickedUpAt: new Date() };
@@ -97,9 +97,9 @@ export async function PATCH(
       include: { courier: true },
     });
 
-    await pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_UPDATED, delivery);
+    pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_UPDATED, delivery).catch(console.error);
     // Notify customer tracking page
-    await pusher.trigger(orderChannel(delivery.orderNumber), EVENTS.DELIVERY_STATUS_UPDATE, delivery);
+    pusher.trigger(orderChannel(delivery.orderNumber), EVENTS.DELIVERY_STATUS_UPDATE, delivery).catch(console.error);
 
     return NextResponse.json(delivery);
   } catch (error) {
@@ -115,7 +115,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     await prisma.delivery.delete({ where: { id } });
-    await pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_UPDATED, {});
+    pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_UPDATED, {}).catch(console.error);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Failed to delete delivery" }, { status: 500 });
