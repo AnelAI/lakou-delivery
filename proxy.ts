@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/auth";
 
-export const runtime = "nodejs";
-
-// Routes accessibles sans connexion
 const PUBLIC_PREFIXES = [
   "/login",
   "/api/auth",
@@ -22,7 +19,7 @@ const PUBLIC_PREFIXES = [
   "/sw.js",
 ];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const isPublic = PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
