@@ -16,6 +16,7 @@ interface Props {
   position: Position | null;
   deliveries: Delivery[];
   targetDeliveryId?: string | null;
+  showRoute?: boolean;
 }
 
 const DEFAULT_CENTER = { lat: 37.2744, lng: 9.8739 };
@@ -27,7 +28,7 @@ function toLatLng([lat, lng]: [number, number]): LatLng {
   return { lat, lng };
 }
 
-export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props) {
+export function CourierLiveMap({ position, deliveries, targetDeliveryId, showRoute = false }: Props) {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
     libraries: LIBRARIES,
@@ -36,33 +37,83 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
   const mapRef = useRef<google.maps.Map | null>(null);
   const trailPointsRef = useRef<LatLng[]>([]);
   const routeCacheRef = useRef<Map<string, LatLng[]>>(new Map());
+  const showRouteRef = useRef(showRoute);
 
   const [trail, setTrail] = useState<LatLng[]>([]);
   const [activeRoute, setActiveRoute] = useState<LatLng[] | null>(null);
   const [secondaryLines, setSecondaryLines] = useState<{ start: LatLng; end: LatLng }[]>([]);
 
+  useEffect(() => { showRouteRef.current = showRoute; }, [showRoute]);
+
+  const active = deliveries.filter((d) => ["assigned", "picked_up"].includes(d.status));
+  const currentTarget =
+    (targetDeliveryId ? active.find((d) => d.id === targetDeliveryId) : null) ??
+    active[0] ??
+    null;
+
+  // Target center: pickup if assigned, delivery address if picked_up
+  const targetCenter = currentTarget
+    ? {
+        lat: currentTarget.status === "picked_up" ? currentTarget.deliveryLat : currentTarget.pickupLat,
+        lng: currentTarget.status === "picked_up" ? currentTarget.deliveryLng : currentTarget.pickupLng,
+      }
+    : null;
+
+  const targetCenterRef = useRef(targetCenter);
+  useEffect(() => { targetCenterRef.current = targetCenter; }, [targetCenter]);
+
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
+    // Initial zoom: target point if showRoute=false, else courier position
+    if (!showRouteRef.current && targetCenterRef.current) {
+      map.panTo(targetCenterRef.current);
+      map.setZoom(16);
+    } else if (showRouteRef.current && position) {
+      map.panTo({ lat: position.lat, lng: position.lng });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update trail + pan map on position change
+  // When showRoute toggles: pan to the right focus
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (!showRoute) {
+      if (targetCenterRef.current) {
+        mapRef.current.panTo(targetCenterRef.current);
+        mapRef.current.setZoom(16);
+      }
+    } else if (position) {
+      mapRef.current.panTo({ lat: position.lat, lng: position.lng });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRoute]);
+
+  // When target changes (pickup → delivery), re-zoom if showRoute=false
+  useEffect(() => {
+    if (showRouteRef.current || !mapRef.current) return;
+    const tc = targetCenterRef.current;
+    if (tc) {
+      mapRef.current.panTo(tc);
+      mapRef.current.setZoom(16);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTarget?.id, currentTarget?.status]);
+
+  // Trail update + map follow on position change
   useEffect(() => {
     if (!position) return;
     const latlng = { lat: position.lat, lng: position.lng };
     trailPointsRef.current.push(latlng);
     if (trailPointsRef.current.length > 200) trailPointsRef.current.shift();
     setTrail([...trailPointsRef.current]);
-    mapRef.current?.panTo(latlng);
+    // Only follow courier when route is shown
+    if (showRouteRef.current) {
+      mapRef.current?.panTo(latlng);
+    }
   }, [position]);
 
-  // Update routes when deliveries change
+  // Fetch OSRM routes (always compute, only display when showRoute=true)
   useEffect(() => {
-    const active = deliveries.filter((d) => ["assigned", "picked_up"].includes(d.status));
-    const currentTarget =
-      (targetDeliveryId ? active.find((d) => d.id === targetDeliveryId) : null) ??
-      active[0] ??
-      null;
-
     const updateRoutes = async () => {
       if (currentTarget && position) {
         const isPickedUp = currentTarget.status === "picked_up";
@@ -107,11 +158,12 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliveries, targetDeliveryId]);
 
-  const active = deliveries.filter((d) => ["assigned", "picked_up"].includes(d.status));
-  const currentTarget =
-    (targetDeliveryId ? active.find((d) => d.id === targetDeliveryId) : null) ??
-    active[0] ??
-    null;
+  const initialCenter =
+    !showRoute && targetCenter
+      ? targetCenter
+      : position
+      ? { lat: position.lat, lng: position.lng }
+      : DEFAULT_CENTER;
 
   if (!isLoaded) {
     return (
@@ -128,7 +180,7 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
     <div className="relative w-full h-full rounded-2xl overflow-hidden">
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
-        center={position ? { lat: position.lat, lng: position.lng } : DEFAULT_CENTER}
+        center={initialCenter}
         zoom={16}
         onLoad={onMapLoad}
         options={{
@@ -158,15 +210,15 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
           />
         )}
 
-        {/* GPS trail */}
-        {trail.length >= 2 && (
+        {/* GPS trail — only when route is visible */}
+        {showRoute && trail.length >= 2 && (
           <Polyline
             path={trail}
             options={{ strokeColor: "#2563eb", strokeWeight: 4, strokeOpacity: 0.5 }}
           />
         )}
 
-        {/* Courier position marker */}
+        {/* Courier position marker — always shown */}
         {position && (
           <OverlayView
             position={{ lat: position.lat, lng: position.lng }}
@@ -190,8 +242,8 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
           </OverlayView>
         )}
 
-        {/* Active route */}
-        {activeRoute && activeRoute.length >= 2 && (() => {
+        {/* Active route — only when showRoute */}
+        {showRoute && activeRoute && activeRoute.length >= 2 && (() => {
           const isPickedUp = currentTarget?.status === "picked_up";
           const color = isPickedUp ? "#f97316" : "#7c3aed";
           return (
@@ -202,8 +254,8 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
           );
         })()}
 
-        {/* Secondary dashed lines */}
-        {secondaryLines.map((line, i) => (
+        {/* Secondary dashed lines — only when showRoute */}
+        {showRoute && secondaryLines.map((line, i) => (
           <Polyline
             key={i}
             path={[line.start, line.end]}
@@ -216,7 +268,7 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
           />
         ))}
 
-        {/* Delivery waypoint markers */}
+        {/* Delivery waypoint markers — always shown */}
         {active.map((delivery) => {
           const isPickedUp = delivery.status === "picked_up";
           const isTarget = delivery.id === currentTarget?.id;
@@ -250,8 +302,14 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId }: Props
         })}
       </GoogleMap>
 
-      <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-2 py-1 rounded-lg shadow-sm border border-gray-200">
-        📍 Position live
+      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg border border-white/10">
+        {showRoute
+          ? "🗺️ Trajet en cours"
+          : currentTarget
+          ? currentTarget.status === "picked_up"
+            ? "🏠 Destination client"
+            : "📦 Point de collecte"
+          : "📍 Position live"}
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
   const [mapExpanded, setMapExpanded] = useState(true);
+  const [showRoute, setShowRoute] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [nearTarget, setNearTarget] = useState<{ delivery: Delivery; type: "pickup" | "delivery" } | null>(null);
@@ -273,7 +274,7 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
         </button>
 
         {mapExpanded && (
-          <div className="h-56 bg-gray-800">
+          <div className="h-56 bg-gray-800 relative">
             <CourierLiveMap
               position={position ? {
                 lat: position.lat,
@@ -283,7 +284,21 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
               } : null}
               deliveries={activeDeliveries}
               targetDeliveryId={currentTarget?.id ?? null}
+              showRoute={showRoute}
             />
+            {activeDeliveries.length > 0 && (
+              <button
+                onClick={() => setShowRoute((v) => !v)}
+                className={`absolute bottom-2 right-2 z-10 text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 active:scale-95 transition-all ${
+                  showRoute
+                    ? "bg-blue-600 border-blue-500 text-white"
+                    : "bg-gray-900/80 backdrop-blur-sm border-gray-600/50 text-gray-200"
+                }`}
+              >
+                <Navigation size={11} />
+                {showRoute ? "Masquer trajet" : "Voir trajet"}
+              </button>
+            )}
           </div>
         )}
       </div>
