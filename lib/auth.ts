@@ -27,10 +27,12 @@ export function verifySessionToken(token: string | undefined): boolean {
 }
 
 export function checkPassword(input: string): boolean {
-  const expected = process.env.ADMIN_PASSWORD ?? "";
+  const expected = (process.env.ADMIN_PASSWORD ?? "").trim();
   if (!expected) return false;
+  const trimmed = input.trim();
+  if (trimmed.length !== expected.length) return false;
   try {
-    return timingSafeEqual(Buffer.from(input), Buffer.from(expected));
+    return timingSafeEqual(Buffer.from(trimmed), Buffer.from(expected));
   } catch {
     return false;
   }
