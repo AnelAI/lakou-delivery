@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/auth";
 
+export const runtime = "nodejs";
+
 // Routes accessibles sans connexion
 const PUBLIC_PREFIXES = [
   "/login",
