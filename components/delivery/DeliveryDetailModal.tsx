@@ -109,7 +109,7 @@ export function DeliveryDetailModal({
                   <Package size={13} />
                   COLLECTE
                 </div>
-                {isLibre && onConfirmPickup && delivery.status === "pending" && (
+                {isLibre && onConfirmPickup && (
                   <button
                     onClick={() => setPickingLocation("pickup")}
                     className="text-xs bg-purple-600 text-white px-2.5 py-1 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
@@ -138,7 +138,7 @@ export function DeliveryDetailModal({
                   <MapPin size={13} />
                   LIVRAISON
                 </div>
-                {delivery.locationConfirmed === false && onConfirmLocation && delivery.status === "pending" && (
+                {delivery.locationConfirmed === false && onConfirmLocation && (
                   <button
                     onClick={() => setPickingLocation("delivery")}
                     className="text-xs bg-orange-500 text-white px-2.5 py-1 rounded-lg font-semibold hover:bg-orange-600 transition-colors"
@@ -147,10 +147,26 @@ export function DeliveryDetailModal({
                   </button>
                 )}
               </div>
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 space-y-2">
+                {/* Address text */}
                 <p className="text-sm text-gray-800 font-medium">{delivery.deliveryAddress}</p>
+
+                {/* GPS coordinates — clickable link to maps */}
+                {delivery.locationConfirmed && delivery.deliveryLat !== 0 && delivery.deliveryLng !== 0 && (
+                  <a
+                    href={`https://maps.google.com/?q=${delivery.deliveryLat},${delivery.deliveryLng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-100 transition-colors font-mono"
+                  >
+                    <MapPin size={11} className="text-blue-500 flex-shrink-0" />
+                    {delivery.deliveryLat.toFixed(6)}, {delivery.deliveryLng.toFixed(6)}
+                    <span className="text-blue-400 ml-1">↗</span>
+                  </a>
+                )}
+
                 {delivery.deliveryDescription && (
-                  <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700 italic flex items-start gap-2">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700 italic flex items-start gap-2">
                     <AlertTriangle size={12} className="flex-shrink-0 mt-0.5 text-amber-500" />
                     {delivery.deliveryDescription}
                   </div>
@@ -255,8 +271,14 @@ export function DeliveryDetailModal({
         <LocationPickerModal
           deliveryId={delivery.id}
           locationType={pickingLocation}
-          description={pickingLocation === "delivery" ? delivery.deliveryDescription : delivery.notes}
+          description={pickingLocation === "delivery" ? delivery.deliveryDescription : null}
+          clientNote={delivery.notes ?? undefined}
           customerName={delivery.customerName}
+          initialCenter={
+            delivery.deliveryLat && delivery.deliveryLng
+              ? { lat: delivery.deliveryLat, lng: delivery.deliveryLng }
+              : undefined
+          }
           onConfirm={(id, lat, lng) => {
             if (pickingLocation === "pickup" && onConfirmPickup) onConfirmPickup(id, lat, lng);
             if (pickingLocation === "delivery" && onConfirmLocation) onConfirmLocation(id, lat, lng);

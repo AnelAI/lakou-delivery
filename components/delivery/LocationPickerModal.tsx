@@ -11,14 +11,18 @@ interface Props {
   deliveryId: string;
   locationType: "pickup" | "delivery";
   description?: string | null;
+  clientNote?: string | null;
   customerName: string;
+  initialCenter?: { lat: number; lng: number };
   onConfirm: (deliveryId: string, lat: number, lng: number) => void;
   onClose: () => void;
 }
 
-export function LocationPickerModal({ deliveryId, locationType, description, customerName, onConfirm, onClose }: Props) {
+export function LocationPickerModal({ deliveryId, locationType, description, clientNote, customerName, initialCenter, onConfirm, onClose }: Props) {
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const center = initialCenter ?? DEFAULT_CENTER;
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
@@ -62,7 +66,12 @@ export function LocationPickerModal({ deliveryId, locationType, description, cus
             <p className="text-sm text-gray-600 mt-0.5 font-medium">{customerName}</p>
             {description && (
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2 italic">
-                &ldquo;{description}&rdquo;
+                📍 &ldquo;{description}&rdquo;
+              </p>
+            )}
+            {clientNote && (
+              <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5 mt-1 italic">
+                📝 &ldquo;{clientNote}&rdquo;
               </p>
             )}
           </div>
@@ -85,8 +94,8 @@ export function LocationPickerModal({ deliveryId, locationType, description, cus
           {isLoaded ? (
             <GoogleMap
               mapContainerStyle={{ width: "100%", height: "100%" }}
-              center={DEFAULT_CENTER}
-              zoom={13}
+              center={center}
+              zoom={15}
               onClick={handleMapClick}
               options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: false }}
             >
