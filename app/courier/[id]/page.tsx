@@ -9,7 +9,7 @@ import { getPusherClient, courierChannel, ADMIN_CHANNEL, EVENTS } from "@/lib/pu
 import {
   Wifi, WifiOff, Navigation, Package, CheckCircle,
   Clock, MapPin, Phone, AlertTriangle, Download,
-  ChevronDown, ChevronUp, Signal, Battery,
+  ChevronDown, ChevronUp, Signal,
 } from "lucide-react";
 
 const CourierLiveMap = dynamic(
@@ -498,7 +498,7 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                   )}
 
                   {/* Action buttons */}
-                  <div className="pt-1">
+                  <div className="pt-1 space-y-2">
                     {!isPickedUp && (
                       <button
                         onClick={() => updateDelivery(delivery.id, "pickup")}
@@ -509,13 +509,26 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                       </button>
                     )}
                     {isPickedUp && (
-                      <button
-                        onClick={() => updateDelivery(delivery.id, "deliver")}
-                        className="w-full bg-green-700 hover:bg-green-600 active:bg-green-800 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
-                      >
-                        <CheckCircle size={18} />
-                        Course livrée !
-                      </button>
+                      <>
+                        {delivery.locationConfirmed && (
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.deliveryLat},${delivery.deliveryLng}&travelmode=driving`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-800 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <Navigation size={17} />
+                            Naviguer vers le client
+                          </a>
+                        )}
+                        <button
+                          onClick={() => updateDelivery(delivery.id, "deliver")}
+                          className="w-full bg-green-700 hover:bg-green-600 active:bg-green-800 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+                        >
+                          <CheckCircle size={18} />
+                          Course livrée !
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

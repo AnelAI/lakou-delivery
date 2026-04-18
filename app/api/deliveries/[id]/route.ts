@@ -95,6 +95,12 @@ export async function PATCH(
         return NextResponse.json({ error: "lat and lng required" }, { status: 400 });
       }
       updateData = { deliveryLat: lat, deliveryLng: lng, locationConfirmed: true };
+    } else if (action === "confirm-pickup") {
+      const { lat, lng, address } = body;
+      if (lat === undefined || lng === undefined) {
+        return NextResponse.json({ error: "lat and lng required" }, { status: 400 });
+      }
+      updateData = { pickupLat: lat, pickupLng: lng, ...(address ? { pickupAddress: address } : {}) };
     }
 
     const delivery = await prisma.delivery.update({

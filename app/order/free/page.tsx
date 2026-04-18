@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Phone, MapPin, Navigation, ChevronLeft, CheckCircle,
-  ChevronRight, Send, X, MessageSquare,
+  ChevronRight, Send, X, Pencil,
 } from "lucide-react";
 
 const MANAGER_PHONE = process.env.NEXT_PUBLIC_MANAGER_PHONE || "+21629461250";
@@ -13,24 +13,8 @@ const MANAGER_PHONE = process.env.NEXT_PUBLIC_MANAGER_PHONE || "+21629461250";
 // Bizerte centre used as default pickup coords for free orders
 const BIZERTE_CENTER = { lat: 37.2744, lng: 9.8739 };
 
-const BIZERTE_LOCATIONS = [
-  { name: "Centre-ville Bizerte",  lat: 37.2744, lng: 9.8739 },
-  { name: "Port de Bizerte",       lat: 37.2756, lng: 9.8686 },
-  { name: "Zarzouna",              lat: 37.2511, lng: 9.8481 },
-  { name: "Corniche Bizerte",      lat: 37.2780, lng: 9.8620 },
-  { name: "Remel",                 lat: 37.2920, lng: 9.8530 },
-  { name: "El Azib",               lat: 37.2100, lng: 9.8450 },
-  { name: "Menzel Bourguiba",      lat: 37.1532, lng: 9.7987 },
-  { name: "Mateur",                lat: 37.0430, lng: 9.6647 },
-  { name: "Ras Jebel",             lat: 37.2167, lng: 10.1167 },
-  { name: "El Alia",               lat: 37.1667, lng: 9.9833 },
-  { name: "Utique",                lat: 37.0536, lng: 10.0531 },
-  { name: "Sejnane",               lat: 37.0583, lng: 9.2333 },
-  { name: "Joumine",               lat: 37.0333, lng: 9.5333 },
-  { name: "Ghezala",               lat: 37.1500, lng: 9.6167 },
-];
 
-type LocationMode = "gps" | "zone" | "description";
+type LocationMode = "gps" | "description";
 
 export default function FreeOrderPage() {
   const router = useRouter();
@@ -71,12 +55,11 @@ export default function FreeOrderPage() {
   const canSubmit = () => {
     if (!customerName || !customerPhone || orderDescription.trim().length < 5) return false;
     if (locationMode === "gps") return !!deliveryLat;
-    if (locationMode === "zone") return !!deliveryLat;
-    if (locationMode === "description") return deliveryDescription.trim().length >= 10;
+if (locationMode === "description") return deliveryDescription.trim().length >= 10;
     return false;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!canSubmit()) { setError("Veuillez remplir tous les champs"); return; }
     setSubmitting(true);
@@ -202,11 +185,10 @@ export default function FreeOrderPage() {
           <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
             <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Votre position de livraison</h3>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {([
                 { id: "gps",         icon: <Navigation size={14} />, label: "GPS" },
-                { id: "zone",        icon: <MapPin size={14} />,     label: "Quartier" },
-                { id: "description", icon: <MessageSquare size={14} />, label: "Décrire" },
+                { id: "description", icon: <Pencil size={14} />,     label: "Note" },
               ] as const).map(({ id, icon, label }) => (
                 <button
                   key={id}
@@ -241,20 +223,6 @@ export default function FreeOrderPage() {
                   : deliveryLat ? `✓ Position GPS (±${gpsAccuracy}m)`
                   : "Partager ma position GPS"}
               </button>
-            )}
-
-            {locationMode === "zone" && (
-              <select
-                className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition-colors appearance-none"
-                value={deliveryAddress}
-                onChange={(e) => {
-                  const loc = BIZERTE_LOCATIONS.find((l) => l.name === e.target.value);
-                  if (loc) { setDeliveryAddress(loc.name); setDeliveryLat(String(loc.lat)); setDeliveryLng(String(loc.lng)); }
-                }}
-              >
-                <option value="">Choisir un quartier...</option>
-                {BIZERTE_LOCATIONS.map((loc) => <option key={loc.name} value={loc.name}>{loc.name}</option>)}
-              </select>
             )}
 
             {locationMode === "description" && (

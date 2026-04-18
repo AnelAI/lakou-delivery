@@ -155,6 +155,15 @@ export default function Dashboard() {
     if (res.ok) fetchAll();
   };
 
+  const handleConfirmPickup = async (deliveryId: string, lat: number, lng: number) => {
+    const res = await fetch(`/api/deliveries/${deliveryId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "confirm-pickup", lat, lng }),
+    });
+    if (res.ok) fetchAll();
+  };
+
   const activeAlerts = alerts.filter((a) => !a.resolved);
   const pendingDeliveries = deliveries.filter((d) => d.status === "pending").length;
 
@@ -307,6 +316,7 @@ export default function Dashboard() {
             onStatusChange={handleStatusChange}
             onAdd={() => setShowAddDelivery(true)}
             onConfirmLocation={handleConfirmLocation}
+            onConfirmPickup={handleConfirmPickup}
           />
         </div>
       </div>

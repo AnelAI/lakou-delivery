@@ -297,6 +297,21 @@ export default function MarketplacePage() {
       {/* ── Content ───────────────────────────────────────────────────── */}
       <main className="max-w-lg mx-auto px-4 py-4 space-y-6">
 
+        {/* Free-form order — hero card always at top */}
+        <Link
+          href="/order/free"
+          className="flex items-center gap-4 bg-gradient-to-r from-gray-900 to-gray-700 text-white rounded-2xl p-5 shadow-lg hover:shadow-xl active:scale-[0.98] transition-all"
+        >
+          <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl">
+            💬
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-lg leading-tight">Commander librement</p>
+            <p className="text-white/70 text-sm mt-0.5">Décrivez votre commande, on s&apos;occupe du reste</p>
+          </div>
+          <ChevronRight size={22} className="flex-shrink-0 text-white/60" />
+        </Link>
+
         {/* Empty DB */}
         {!loading && merchants.length === 0 && (
           <div className="bg-white rounded-3xl p-10 text-center shadow-sm">
@@ -365,23 +380,6 @@ export default function MarketplacePage() {
             )}
           </section>
         )}
-
-        {/* Free-form order */}
-        <section>
-          <Link
-            href="/order/free"
-            className="flex items-center gap-4 bg-gradient-to-r from-gray-900 to-gray-700 text-white rounded-2xl p-5 shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
-          >
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center flex-shrink-0 text-2xl">
-              💬
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-base leading-tight">Commander librement</p>
-              <p className="text-white/70 text-sm mt-0.5">Décrivez votre commande sans choisir de marchand</p>
-            </div>
-            <ChevronRight size={20} className="flex-shrink-0 text-white/60" />
-          </Link>
-        </section>
 
         {/* Track order */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">
