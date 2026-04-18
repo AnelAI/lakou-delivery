@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useState } from "react";
 import { X, Package, MapPin, CheckCircle } from "lucide-react";
 
-const BIZERTE_CENTER = { lat: 37.2744, lng: 9.8739 };
-const LIBRARIES: ("geometry" | "places")[] = [];
+const BIZERTE_CENTER: [number, number] = [37.2744, 9.8739];
 
 interface Props {
   deliveryId: string;
@@ -22,20 +21,60 @@ export function LocationPickerModal({
   deliveryId, locationType, description, clientNote, customerName,
   initialCenter, onConfirm, onClose,
 }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef       = useRef<unknown>(null);
+  const markerRef    = useRef<unknown>(null);
+
   const [pin, setPin]       = useState<{ lat: number; lng: number } | null>(null);
+  const [adminNote, setAdminNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const center = initialCenter ?? BIZERTE_CENTER;
   const isPickup = locationType === "pickup";
+  const center: [number, number] = initialCenter
+    ? [initialCenter.lat, initialCenter.lng]
+    : BIZERTE_CENTER;
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: "google-map-script",
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
-    libraries: LIBRARIES,
-  });
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
-    if (e.latLng) setPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+    // Leaflet must run client-side only
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const L = require("leaflet") as typeof import("leaflet");
+
+    // Fix broken webpack marker icons
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png").default,
+      iconUrl:       require("leaflet/dist/images/marker-icon.png").default,
+      shadowUrl:     require("leaflet/dist/images/marker-shadow.png").default,
+    });
+
+    const map = L.map(containerRef.current, { zoomControl: true }).setView(center, 16);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap",
+      maxZoom: 19,
+    }).addTo(map);
+
+    map.on("click", (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      if (markerRef.current) {
+        (markerRef.current as L.Marker).setLatLng([lat, lng]);
+      } else {
+        markerRef.current = L.marker([lat, lng]).addTo(map);
+      }
+      setPin({ lat, lng });
+    });
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current  = null;
+      markerRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleConfirm = async () => {
@@ -43,10 +82,12 @@ export function LocationPickerModal({
     setSaving(true);
     try {
       const action = isPickup ? "confirm-pickup" : "confirm-location";
+      const body: Record<string, unknown> = { action, lat: pin.lat, lng: pin.lng };
+      if (isPickup && adminNote.trim()) body.address = adminNote.trim();
       const res = await fetch(`/api/deliveries/${deliveryId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, lat: pin.lat, lng: pin.lng }),
+        body: JSON.stringify(body),
       });
       if (res.ok) onConfirm(deliveryId, pin.lat, pin.lng);
     } finally {
@@ -55,108 +96,85 @@ export function LocationPickerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-3">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full flex flex-col"
-        style={{ maxWidth: 520, maxHeight: "92vh" }}
+        className="bg-white rounded-xl shadow-xl w-full flex flex-col border border-gray-200"
+        style={{ maxWidth: 500, maxHeight: "92vh" }}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3 flex-shrink-0">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="font-bold text-gray-900 flex items-center gap-2 text-base">
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2 text-sm">
               {isPickup
-                ? <><Package size={17} className="text-purple-500 flex-shrink-0" /> Localiser le point de collecte</>
-                : <><MapPin size={17} className="text-orange-500 flex-shrink-0" /> Localiser la livraison</>}
+                ? <><Package size={15} className="text-gray-600 flex-shrink-0" /> Point de collecte</>
+                : <><MapPin size={15} className="text-gray-600 flex-shrink-0" /> Position de livraison</>}
             </h2>
-            <p className="text-sm text-gray-500 mt-0.5">{customerName}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{customerName}</p>
 
             {clientNote && (
-              <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800">
-                <span className="font-semibold">Commande :</span> {clientNote}
-              </div>
+              <p className="mt-2 text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                <span className="font-medium">Commande :</span> {clientNote}
+              </p>
             )}
             {description && (
-              <div className="mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800 italic">
+              <p className="mt-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 italic">
                 📍 {description}
-              </div>
+              </p>
             )}
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
-            <X size={18} className="text-gray-500" />
+            <X size={16} className="text-gray-400" />
           </button>
         </div>
 
         {/* Instruction */}
-        <div className={`px-4 py-2 text-xs font-medium flex-shrink-0 border-b ${
-          isPickup ? "bg-purple-50 text-purple-700 border-purple-100" : "bg-orange-50 text-orange-700 border-orange-100"
-        }`}>
-          👆 Cliquez sur la carte pour placer l&apos;épingle
-          {pin && <span className="ml-2 font-bold text-green-700">— position sélectionnée ✓</span>}
-        </div>
+        <p className="px-5 py-2 text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
+          Cliquez sur la carte pour placer l&apos;épingle
+          {pin && <span className="ml-1.5 text-green-600 font-medium">· position sélectionnée</span>}
+        </p>
 
-        {/* Map — explicit height so Google Maps renders correctly */}
-        <div style={{ height: 380, flexShrink: 0 }}>
-          {loadError && (
-            <div className="w-full h-full flex items-center justify-center text-sm text-red-500 bg-red-50">
-              Erreur de chargement de la carte
-            </div>
-          )}
-          {!isLoaded && !loadError && (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100">
-              <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-          {isLoaded && (
-            <GoogleMap
-              mapContainerStyle={{ width: "100%", height: "380px" }}
-              center={center}
-              zoom={16}
-              onClick={handleMapClick}
-              options={{
-                streetViewControl: false,
-                mapTypeControl: false,
-                fullscreenControl: false,
-                zoomControlOptions: { position: 9 },
-              }}
-            >
-              {pin && (
-                <Marker
-                  position={pin}
-                  icon={isPickup
-                    ? { url: "https://maps.google.com/mapfiles/ms/icons/purple-dot.png" }
-                    : { url: "https://maps.google.com/mapfiles/ms/icons/orange-dot.png" }
-                  }
-                />
-              )}
-            </GoogleMap>
-          )}
-        </div>
+        {/* Map */}
+        <div ref={containerRef} style={{ height: 340, flexShrink: 0 }} />
 
-        {/* Coordinates preview */}
+        {/* Coordinates */}
         {pin && (
-          <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 font-mono flex-shrink-0">
+          <p className="px-5 py-1.5 text-[11px] text-gray-400 font-mono border-t border-gray-100 bg-gray-50">
             {pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}
+          </p>
+        )}
+
+        {/* Admin note for pickup */}
+        {isPickup && (
+          <div className="px-5 py-3 border-t border-gray-100">
+            <label className="text-xs font-medium text-gray-600 block mb-1.5">
+              Note de collecte (optionnel)
+            </label>
+            <input
+              type="text"
+              value={adminNote}
+              onChange={(e) => setAdminNote(e.target.value)}
+              placeholder="Ex : Pizzeria Hassan, rue de la République..."
+              className="w-full text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:bg-white transition-colors"
+            />
           </div>
         )}
 
         {/* Footer */}
-        <div className="px-5 py-3.5 border-t border-gray-100 flex gap-3 flex-shrink-0">
+        <div className="px-5 py-3.5 border-t border-gray-100 flex gap-2.5">
           <button
             onClick={onClose}
-            className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
           >
             Annuler
           </button>
           <button
             onClick={handleConfirm}
             disabled={!pin || saving}
-            className={`flex-1 py-3 disabled:opacity-40 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${
-              isPickup ? "bg-purple-600 hover:bg-purple-700" : "bg-green-600 hover:bg-green-700"
-            }`}
+            className="flex-1 py-2.5 bg-gray-900 disabled:opacity-40 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 hover:bg-gray-800"
           >
             {saving
               ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : <><CheckCircle size={16} /> Confirmer la position</>}
+              : <><CheckCircle size={15} /> Confirmer</>}
           </button>
         </div>
       </div>
