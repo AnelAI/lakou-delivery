@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
-import { X, MapPin, CheckCircle, Package } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, Package, MapPin, CheckCircle } from "lucide-react";
 
-const DEFAULT_CENTER = { lat: 37.2744, lng: 9.8739 };
-const LIBRARIES: ("geometry" | "places")[] = [];
+const DEFAULT_CENTER: [number, number] = [37.2744, 9.8739];
 
 interface Props {
   deliveryId: string;
@@ -18,19 +16,70 @@ interface Props {
   onClose: () => void;
 }
 
-export function LocationPickerModal({ deliveryId, locationType, description, clientNote, customerName, initialCenter, onConfirm, onClose }: Props) {
-  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
+export function LocationPickerModal({
+  deliveryId, locationType, description, clientNote, customerName,
+  initialCenter, onConfirm, onClose,
+}: Props) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef   = useRef<unknown>(null);
+  const markerRef        = useRef<unknown>(null);
+  const [pin, setPin]    = useState<{ lat: number; lng: number } | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const center = initialCenter ?? DEFAULT_CENTER;
+  const center: [number, number] = initialCenter
+    ? [initialCenter.lat, initialCenter.lng]
+    : DEFAULT_CENTER;
 
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
-    libraries: LIBRARIES,
-  });
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
 
-  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
-    if (e.latLng) setPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+    // Inject Leaflet CSS once
+    const cssId = "leaflet-css";
+    if (!document.getElementById(cssId)) {
+      const link = document.createElement("link");
+      link.id   = cssId;
+      link.rel  = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const L = require("leaflet") as typeof import("leaflet");
+
+    // Fix default marker icons (broken by webpack)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    });
+
+    const map = L.map(mapContainerRef.current).setView(center, 16);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(map);
+
+    map.on("click", (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      if (markerRef.current) {
+        (markerRef.current as L.Marker).setLatLng([lat, lng]);
+      } else {
+        markerRef.current = L.marker([lat, lng]).addTo(map);
+      }
+      setPin({ lat, lng });
+    });
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+      markerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleConfirm = async () => {
@@ -52,72 +101,62 @@ export function LocationPickerModal({ deliveryId, locationType, description, cli
   const isPickup = locationType === "pickup";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col" style={{ maxHeight: "90vh" }}>
-
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3">
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden"
+        style={{ maxWidth: 520, maxHeight: "92vh" }}
+      >
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3 flex-shrink-0">
-          <div>
-            <h2 className="font-bold text-gray-900 flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <h2 className="font-bold text-gray-900 flex items-center gap-2 text-base">
               {isPickup
-                ? <><Package size={18} className="text-purple-500" /> Localiser le point de collecte</>
-                : <><MapPin size={18} className="text-orange-500" /> Localiser la livraison</>}
+                ? <><Package size={17} className="text-purple-500 flex-shrink-0" /> Localiser le point de collecte</>
+                : <><MapPin size={17} className="text-orange-500 flex-shrink-0" /> Localiser la livraison</>}
             </h2>
-            <p className="text-sm text-gray-600 mt-0.5 font-medium">{customerName}</p>
-            {description && (
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2 italic">
-                📍 &ldquo;{description}&rdquo;
-              </p>
-            )}
+            <p className="text-sm text-gray-500 mt-0.5">{customerName}</p>
+
+            {/* Client note */}
             {clientNote && (
-              <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5 mt-1 italic">
-                📝 &ldquo;{clientNote}&rdquo;
-              </p>
+              <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800">
+                <span className="font-semibold">Commande :</span> {clientNote}
+              </div>
+            )}
+
+            {/* Location description */}
+            {description && (
+              <div className="mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800 italic">
+                📍 {description}
+              </div>
             )}
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 mt-0.5">
             <X size={18} className="text-gray-500" />
           </button>
         </div>
 
         {/* Instruction */}
-        <div className={`px-5 py-2.5 border-b text-xs flex-shrink-0 ${
+        <div className={`px-4 py-2 text-xs font-medium flex-shrink-0 ${
           isPickup
-            ? "bg-purple-50 border-purple-100 text-purple-700"
-            : "bg-blue-50 border-blue-100 text-blue-700"
+            ? "bg-purple-50 text-purple-700 border-b border-purple-100"
+            : "bg-orange-50 text-orange-700 border-b border-orange-100"
         }`}>
-          Cliquez sur la carte pour placer l&apos;épingle au point de {isPickup ? "collecte" : "livraison"}.
+          👆 Cliquez sur la carte pour placer l&apos;épingle
+          {pin && <span className="ml-2 font-bold">— épingle placée ✓</span>}
         </div>
 
         {/* Map */}
-        <div className="flex-1 min-h-0" style={{ height: 360 }}>
-          {isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={{ width: "100%", height: "100%" }}
-              center={center}
-              zoom={15}
-              onClick={handleMapClick}
-              options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: false }}
-            >
-              {pin && (
-                <Marker
-                  position={pin}
-                  icon={isPickup
-                    ? { url: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png" }
-                    : { url: "http://maps.google.com/mapfiles/ms/icons/orange-dot.png" }
-                  }
-                />
-              )}
-            </GoogleMap>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100">
-              <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-        </div>
+        <div ref={mapContainerRef} className="flex-1" style={{ height: 380, minHeight: 280 }} />
+
+        {/* Coordinates preview */}
+        {pin && (
+          <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 font-mono flex-shrink-0">
+            {pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}
+          </div>
+        )}
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-3 flex-shrink-0">
+        <div className="px-5 py-3.5 border-t border-gray-100 flex gap-3 flex-shrink-0">
           <button
             onClick={onClose}
             className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
@@ -127,13 +166,13 @@ export function LocationPickerModal({ deliveryId, locationType, description, cli
           <button
             onClick={handleConfirm}
             disabled={!pin || saving}
-            className={`flex-1 py-3 disabled:opacity-40 text-white rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+            className={`flex-1 py-3 disabled:opacity-40 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${
               isPickup ? "bg-purple-600 hover:bg-purple-700" : "bg-green-600 hover:bg-green-700"
             }`}
           >
             {saving
               ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : <><CheckCircle size={16} /> Confirmer</>}
+              : <><CheckCircle size={16} /> Confirmer la position</>}
           </button>
         </div>
       </div>
