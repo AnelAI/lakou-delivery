@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState, useCallback } from "react";
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import { X, Package, MapPin, CheckCircle } from "lucide-react";
 
-const DEFAULT_CENTER: [number, number] = [37.2744, 9.8739];
+const BIZERTE_CENTER = { lat: 37.2744, lng: 9.8739 };
+const LIBRARIES: ("geometry" | "places")[] = [];
 
 interface Props {
   deliveryId: string;
@@ -20,73 +22,27 @@ export function LocationPickerModal({
   deliveryId, locationType, description, clientNote, customerName,
   initialCenter, onConfirm, onClose,
 }: Props) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef   = useRef<unknown>(null);
-  const markerRef        = useRef<unknown>(null);
-  const [pin, setPin]    = useState<{ lat: number; lng: number } | null>(null);
+  const [pin, setPin]       = useState<{ lat: number; lng: number } | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const center: [number, number] = initialCenter
-    ? [initialCenter.lat, initialCenter.lng]
-    : DEFAULT_CENTER;
+  const center = initialCenter ?? BIZERTE_CENTER;
+  const isPickup = locationType === "pickup";
 
-  useEffect(() => {
-    if (!mapContainerRef.current) return;
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
+    libraries: LIBRARIES,
+  });
 
-    // Inject Leaflet CSS once
-    const cssId = "leaflet-css";
-    if (!document.getElementById(cssId)) {
-      const link = document.createElement("link");
-      link.id   = cssId;
-      link.rel  = "stylesheet";
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(link);
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const L = require("leaflet") as typeof import("leaflet");
-
-    // Fix default marker icons (broken by webpack)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-      shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    });
-
-    const map = L.map(mapContainerRef.current).setView(center, 16);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap contributors",
-      maxZoom: 19,
-    }).addTo(map);
-
-    map.on("click", (e: L.LeafletMouseEvent) => {
-      const { lat, lng } = e.latlng;
-      if (markerRef.current) {
-        (markerRef.current as L.Marker).setLatLng([lat, lng]);
-      } else {
-        markerRef.current = L.marker([lat, lng]).addTo(map);
-      }
-      setPin({ lat, lng });
-    });
-
-    mapInstanceRef.current = map;
-
-    return () => {
-      map.remove();
-      mapInstanceRef.current = null;
-      markerRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (e.latLng) setPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
   }, []);
 
   const handleConfirm = async () => {
     if (!pin) return;
     setSaving(true);
     try {
-      const action = locationType === "pickup" ? "confirm-pickup" : "confirm-location";
+      const action = isPickup ? "confirm-pickup" : "confirm-location";
       const res = await fetch(`/api/deliveries/${deliveryId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -98,12 +54,10 @@ export function LocationPickerModal({
     }
   };
 
-  const isPickup = locationType === "pickup";
-
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-full flex flex-col"
         style={{ maxWidth: 520, maxHeight: "92vh" }}
       >
         {/* Header */}
@@ -116,37 +70,67 @@ export function LocationPickerModal({
             </h2>
             <p className="text-sm text-gray-500 mt-0.5">{customerName}</p>
 
-            {/* Client note */}
             {clientNote && (
               <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800">
                 <span className="font-semibold">Commande :</span> {clientNote}
               </div>
             )}
-
-            {/* Location description */}
             {description && (
               <div className="mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800 italic">
                 📍 {description}
               </div>
             )}
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 mt-0.5">
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
             <X size={18} className="text-gray-500" />
           </button>
         </div>
 
         {/* Instruction */}
-        <div className={`px-4 py-2 text-xs font-medium flex-shrink-0 ${
-          isPickup
-            ? "bg-purple-50 text-purple-700 border-b border-purple-100"
-            : "bg-orange-50 text-orange-700 border-b border-orange-100"
+        <div className={`px-4 py-2 text-xs font-medium flex-shrink-0 border-b ${
+          isPickup ? "bg-purple-50 text-purple-700 border-purple-100" : "bg-orange-50 text-orange-700 border-orange-100"
         }`}>
           👆 Cliquez sur la carte pour placer l&apos;épingle
-          {pin && <span className="ml-2 font-bold">— épingle placée ✓</span>}
+          {pin && <span className="ml-2 font-bold text-green-700">— position sélectionnée ✓</span>}
         </div>
 
-        {/* Map */}
-        <div ref={mapContainerRef} className="flex-1" style={{ height: 380, minHeight: 280 }} />
+        {/* Map — explicit height so Google Maps renders correctly */}
+        <div style={{ height: 380, flexShrink: 0 }}>
+          {loadError && (
+            <div className="w-full h-full flex items-center justify-center text-sm text-red-500 bg-red-50">
+              Erreur de chargement de la carte
+            </div>
+          )}
+          {!isLoaded && !loadError && (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+              <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+          {isLoaded && (
+            <GoogleMap
+              mapContainerStyle={{ width: "100%", height: "380px" }}
+              center={center}
+              zoom={16}
+              onClick={handleMapClick}
+              options={{
+                streetViewControl: false,
+                mapTypeControl: false,
+                fullscreenControl: false,
+                zoomControlOptions: { position: 9 },
+              }}
+            >
+              {pin && (
+                <Marker
+                  position={pin}
+                  icon={isPickup
+                    ? { url: "https://maps.google.com/mapfiles/ms/icons/purple-dot.png" }
+                    : { url: "https://maps.google.com/mapfiles/ms/icons/orange-dot.png" }
+                  }
+                />
+              )}
+            </GoogleMap>
+          )}
+        </div>
 
         {/* Coordinates preview */}
         {pin && (

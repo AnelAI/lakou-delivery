@@ -41,7 +41,7 @@ export default function FreeOrderPage() {
     setError("");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setDeliveryAddress("Ma position GPS");
+        setDeliveryAddress("Position client GPS");
         setDeliveryLat(String(pos.coords.latitude));
         setDeliveryLng(String(pos.coords.longitude));
         setGpsAccuracy(Math.round(pos.coords.accuracy));

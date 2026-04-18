@@ -76,6 +76,13 @@ export function DeliveryDetailModal({
               </div>
               <h2 className="font-bold text-gray-900 text-lg leading-tight">{delivery.customerName}</h2>
               <p className="text-xs text-gray-400 font-mono mt-0.5">{delivery.orderNumber}</p>
+              {/* Note client visible dès l'ouverture */}
+              {delivery.notes && (
+                <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-800 flex items-start gap-1.5">
+                  <FileText size={12} className="flex-shrink-0 mt-0.5 text-yellow-600" />
+                  <span>{delivery.notes}</span>
+                </div>
+              )}
             </div>
             <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
               <X size={20} className="text-gray-500" />
@@ -118,13 +125,25 @@ export function DeliveryDetailModal({
                   </button>
                 )}
               </div>
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 space-y-1.5">
                 <p className="text-sm text-gray-800 font-medium">{delivery.pickupAddress}</p>
                 {delivery.merchant && (
-                  <p className="text-xs text-gray-500 mt-0.5">{delivery.merchant.name}</p>
+                  <p className="text-xs text-gray-500">{delivery.merchant.name}</p>
+                )}
+                {delivery.pickupLat !== 0 && delivery.pickupLng !== 0 && (
+                  <a
+                    href={`https://maps.google.com/?q=${delivery.pickupLat},${delivery.pickupLng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-purple-600 bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5 hover:bg-purple-100 transition-colors font-mono"
+                  >
+                    <MapPin size={11} className="text-purple-500 flex-shrink-0" />
+                    {delivery.pickupLat.toFixed(6)}, {delivery.pickupLng.toFixed(6)}
+                    <span className="text-purple-400 ml-1">↗</span>
+                  </a>
                 )}
                 {isLibre && (
-                  <p className="text-xs text-purple-600 mt-1 italic">
+                  <p className="text-xs text-purple-600 italic">
                     ⚠️ Vérifiez le lieu de collecte dans les notes avant d&apos;assigner
                   </p>
                 )}
