@@ -210,7 +210,10 @@ export default function MarketplacePage() {
       if (activeCategory !== "all") params.set("category", activeCategory);
       if (search) params.set("search", search);
       const res = await fetch(`/api/merchants?${params}`);
-      if (res.ok) setMerchants(await res.json());
+      if (res.ok) {
+        const data: Merchant[] = await res.json();
+        setMerchants(data.filter((m) => m.category !== "café" && m.category !== "cafe"));
+      }
     } finally { setLoading(false); }
   }, [activeCategory, search]);
 
@@ -362,6 +365,23 @@ export default function MarketplacePage() {
             )}
           </section>
         )}
+
+        {/* Free-form order */}
+        <section>
+          <Link
+            href="/order/free"
+            className="flex items-center gap-4 bg-gradient-to-r from-gray-900 to-gray-700 text-white rounded-2xl p-5 shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
+          >
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center flex-shrink-0 text-2xl">
+              💬
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-base leading-tight">Commander librement</p>
+              <p className="text-white/70 text-sm mt-0.5">Décrivez votre commande sans choisir de marchand</p>
+            </div>
+            <ChevronRight size={20} className="flex-shrink-0 text-white/60" />
+          </Link>
+        </section>
 
         {/* Track order */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">

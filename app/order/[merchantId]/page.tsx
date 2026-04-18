@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Phone, MapPin, Navigation, ChevronLeft, CheckCircle,
-  ChevronRight, Globe, Star, Clock, Send, X, Flame,
+  ChevronRight, Globe, Star, Clock, Send, X, Flame, MessageSquare,
 } from "lucide-react";
 import type { Merchant } from "@/lib/types";
 
@@ -63,6 +63,7 @@ const BIZERTE_LOCATIONS = [
 ];
 
 type Step = "detail" | "order" | "success";
+type LocationMode = "gps" | "zone" | "description";
 
 export default function MerchantPage({ params }: { params: Promise<{ merchantId: string }> }) {
   const { merchantId } = use(params);
@@ -72,12 +73,14 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
   const [step, setStep]         = useState<Step>("detail");
   const [orderNumber, setOrderNumber] = useState("");
 
-  // Form
+  // Form state
   const [customerName,    setCustomerName]    = useState("");
   const [customerPhone,   setCustomerPhone]   = useState("");
+  const [locationMode,    setLocationMode]    = useState<LocationMode>("gps");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryLat,     setDeliveryLat]     = useState("");
   const [deliveryLng,     setDeliveryLng]     = useState("");
+  const [deliveryDescription, setDeliveryDescription] = useState("");
   const [notes,           setNotes]           = useState("");
   const [gpsLoading,      setGpsLoading]      = useState(false);
   const [gpsAccuracy,     setGpsAccuracy]     = useState<number | null>(null);
@@ -90,9 +93,20 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
       .then((d: Merchant | null) => { if (d) setMerchant(d); });
   }, [merchantId]);
 
+  // Reset location when mode changes
+  useEffect(() => {
+    setDeliveryAddress("");
+    setDeliveryLat("");
+    setDeliveryLng("");
+    setDeliveryDescription("");
+    setGpsAccuracy(null);
+    setError("");
+  }, [locationMode]);
+
   const useGPS = () => {
-    if (!navigator.geolocation) { setError("GPS non disponible"); return; }
+    if (!navigator.geolocation) { setError("GPS non disponible sur cet appareil"); return; }
     setGpsLoading(true);
+    setError("");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setDeliveryAddress("Ma position GPS");
@@ -106,10 +120,27 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
     );
   };
 
+  const canSubmit = () => {
+    if (!customerName || !customerPhone) return false;
+    if (locationMode === "gps") return !!deliveryLat;
+    if (locationMode === "zone") return !!deliveryLat;
+    if (locationMode === "description") return deliveryDescription.trim().length >= 10;
+    return false;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deliveryLat) { setError("Sélectionnez une adresse"); return; }
+    if (!canSubmit()) { setError("Veuillez renseigner votre position"); return; }
     setSubmitting(true); setError("");
+
+    const isDescription = locationMode === "description";
+    // For description mode: use merchant coords as placeholder, admin will confirm
+    const lat = isDescription ? merchant!.lat : parseFloat(deliveryLat);
+    const lng = isDescription ? merchant!.lng : parseFloat(deliveryLng);
+    const address = isDescription
+      ? `📍 À confirmer — ${deliveryDescription.slice(0, 60)}`
+      : deliveryAddress;
+
     try {
       const res = await fetch("/api/deliveries", {
         method: "POST",
@@ -118,7 +149,11 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
           customerName, customerPhone,
           pickupAddress: merchant!.address || merchant!.name,
           pickupLat: merchant!.lat, pickupLng: merchant!.lng,
-          deliveryAddress, deliveryLat: parseFloat(deliveryLat), deliveryLng: parseFloat(deliveryLng),
+          deliveryAddress: address,
+          deliveryLat: lat,
+          deliveryLng: lng,
+          deliveryDescription: isDescription ? deliveryDescription.trim() : null,
+          locationConfirmed: !isDescription,
           notes, category: merchant!.category, merchantId: merchant!.id, priority: 0,
         }),
       });
@@ -179,55 +214,30 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
   return (
     <div className="min-h-screen bg-[#F6F6F6]">
 
-      {/* ── Full-width hero ─────────────────────────────────────────────── */}
-      <div
-        className="relative w-full"
-        style={{
-          height: 260,
-          background: `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`,
-        }}
-      >
-        {/* pattern */}
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: "radial-gradient(circle at 20% 80%, white 1.5px, transparent 1.5px), radial-gradient(circle at 80% 20%, white 1.5px, transparent 1.5px)",
-            backgroundSize: "50px 50px",
-          }}
-        />
-
-        {/* Back button */}
-        <Link
-          href="/order"
-          className="absolute top-12 left-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors z-10"
-        >
+      {/* Hero */}
+      <div className="relative w-full" style={{ height: 260, background: `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)` }}>
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: "radial-gradient(circle at 20% 80%, white 1.5px, transparent 1.5px), radial-gradient(circle at 80% 20%, white 1.5px, transparent 1.5px)",
+          backgroundSize: "50px 50px",
+        }} />
+        <Link href="/order" className="absolute top-12 left-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors z-10">
           <ChevronLeft size={20} className="text-gray-800" />
         </Link>
-
-        {/* Emoji centered */}
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-[90px] drop-shadow-2xl">{cat.emoji}</span>
         </div>
-
-        {/* Bottom fade */}
         <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#F6F6F6] to-transparent" />
       </div>
 
-      {/* ── Info sheet ──────────────────────────────────────────────────── */}
       <div className="max-w-lg mx-auto px-4 -mt-4 pb-10 space-y-4">
 
         {/* Title card */}
         <div className="bg-white rounded-3xl p-5 shadow-sm">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-1">
-                {merchant.name}
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-1">{merchant.name}</h1>
               <div className="flex items-center gap-2 flex-wrap">
-                <span
-                  className="text-xs font-bold px-3 py-1 rounded-full text-white"
-                  style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}
-                >
+                <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}>
                   {cat.emoji} {cat.label}
                 </span>
                 {(merchant.id.charCodeAt(0) % 3 === 0) && (
@@ -238,13 +248,10 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
               </div>
             </div>
           </div>
-
-          {/* Stats row */}
           <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-amber-500 font-bold text-lg mb-0.5">
-                <Star size={16} fill="currentColor" />
-                {rating}
+                <Star size={16} fill="currentColor" />{rating}
               </div>
               <p className="text-xs text-gray-400">Note</p>
             </div>
@@ -293,7 +300,7 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
           </div>
         </div>
 
-        {/* ── CTA / Order form ──────────────────────────────────────────── */}
+        {/* CTA */}
         {step === "detail" && (
           <button
             onClick={() => setStep("order")}
@@ -305,13 +312,11 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
           </button>
         )}
 
+        {/* Order form */}
         {step === "order" && (
           <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
-            {/* Form header */}
-            <div
-              className="px-5 py-4 flex items-center justify-between"
-              style={{ background: `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)` }}
-            >
+            {/* Header */}
+            <div className="px-5 py-4 flex items-center justify-between" style={{ background: `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)` }}>
               <div className="flex items-center gap-3">
                 <span className="text-3xl">{cat.emoji}</span>
                 <div>
@@ -319,17 +324,14 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
                   <p className="text-white/80 text-xs">{time} · Livraison gratuite</p>
                 </div>
               </div>
-              <button
-                onClick={() => setStep("detail")}
-                className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
-              >
+              <button onClick={() => setStep("detail")} className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
                 <X size={16} className="text-white" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-5">
 
-              {/* Customer */}
+              {/* Coordonnées */}
               <div className="space-y-3">
                 <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Vos coordonnées</h3>
                 <input
@@ -344,45 +346,92 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
                 />
               </div>
 
-              {/* Delivery address */}
+              {/* Position — 3 modes */}
               <div className="space-y-3">
-                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Adresse de livraison</h3>
-                <button
-                  type="button" onClick={useGPS} disabled={gpsLoading}
-                  className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 text-sm font-semibold transition-all
-                    ${deliveryAddress === "Ma position GPS"
-                      ? "border-green-400 bg-green-50 text-green-700"
-                      : "border-dashed border-gray-300 bg-gray-50 text-gray-600 hover:border-orange-400 hover:text-orange-600"}`}
-                >
-                  <Navigation size={15} className={gpsLoading ? "animate-spin" : ""} />
-                  {gpsLoading ? "Localisation..."
-                    : deliveryAddress === "Ma position GPS" ? `Position GPS (±${gpsAccuracy}m)`
-                    : "Utiliser ma position GPS"}
-                </button>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                    <span className="text-gray-400 text-xs">ou</span>
-                  </div>
+                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Votre position de livraison</h3>
+
+                {/* Mode selector */}
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { id: "gps",         icon: <Navigation size={14} />, label: "GPS" },
+                    { id: "zone",        icon: <MapPin size={14} />,     label: "Quartier" },
+                    { id: "description", icon: <MessageSquare size={14} />, label: "Décrire" },
+                  ] as const).map(({ id, icon, label }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setLocationMode(id)}
+                      className={`flex flex-col items-center gap-1 py-3 rounded-xl text-xs font-semibold border-2 transition-all ${
+                        locationMode === id
+                          ? "border-orange-400 bg-orange-50 text-orange-700"
+                          : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300"
+                      }`}
+                    >
+                      {icon}
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* GPS mode */}
+                {locationMode === "gps" && (
+                  <button
+                    type="button" onClick={useGPS} disabled={gpsLoading}
+                    className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 text-sm font-semibold transition-all
+                      ${deliveryLat
+                        ? "border-green-400 bg-green-50 text-green-700"
+                        : "border-dashed border-gray-300 bg-gray-50 text-gray-600 hover:border-orange-400 hover:text-orange-600"}`}
+                  >
+                    <Navigation size={15} className={gpsLoading ? "animate-spin" : ""} />
+                    {gpsLoading ? "Localisation en cours..."
+                      : deliveryLat ? `✓ Position GPS obtenue (±${gpsAccuracy}m)`
+                      : "Partager ma position GPS"}
+                  </button>
+                )}
+
+                {/* Zone mode */}
+                {locationMode === "zone" && (
                   <select
-                    className="w-full bg-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition-colors appearance-none"
-                    value={deliveryAddress !== "Ma position GPS" ? deliveryAddress : ""}
+                    className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition-colors appearance-none"
+                    value={deliveryAddress}
                     onChange={(e) => {
                       const loc = BIZERTE_LOCATIONS.find((l) => l.name === e.target.value);
-                      if (loc) { setDeliveryAddress(loc.name); setDeliveryLat(String(loc.lat)); setDeliveryLng(String(loc.lng)); setGpsAccuracy(null); }
+                      if (loc) { setDeliveryAddress(loc.name); setDeliveryLat(String(loc.lat)); setDeliveryLng(String(loc.lng)); }
                     }}
                   >
                     <option value="">Choisir un quartier...</option>
                     {BIZERTE_LOCATIONS.map((loc) => <option key={loc.name} value={loc.name}>{loc.name}</option>)}
                   </select>
-                </div>
+                )}
+
+                {/* Description mode */}
+                {locationMode === "description" && (
+                  <div className="space-y-2">
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700 flex items-start gap-2">
+                      <span className="flex-shrink-0 mt-0.5">ℹ️</span>
+                      <span>Décrivez votre emplacement avec des repères connus. Motaz vous confirmera la livraison.</span>
+                    </div>
+                    <textarea
+                      value={deliveryDescription}
+                      onChange={(e) => setDeliveryDescription(e.target.value)}
+                      placeholder="Ex : Près de la pharmacie centrale, en face du café Bel Aziz, 2ème rue à gauche après la mosquée..."
+                      rows={4}
+                      required={locationMode === "description"}
+                      className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition-colors resize-none"
+                    />
+                    {deliveryDescription.length > 0 && deliveryDescription.length < 10 && (
+                      <p className="text-xs text-red-500">Soyez plus précis (min. 10 caractères)</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Notes */}
               <div className="space-y-2">
-                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Instructions</h3>
+                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Instructions supplémentaires</h3>
                 <textarea
                   value={notes} onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Fragilité, code portail, étage..."
+                  placeholder="Fragilité, code portail, étage, sonnerie..."
                   rows={2}
                   className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition-colors resize-none"
                 />
@@ -396,7 +445,7 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
 
               <button
                 type="submit"
-                disabled={submitting || !deliveryLat}
+                disabled={submitting || !canSubmit()}
                 className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-base hover:bg-gray-800 active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg"
               >
                 {submitting

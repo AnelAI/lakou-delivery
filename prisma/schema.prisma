@@ -51,7 +51,9 @@ model Delivery {
   deliveryAddress String
   deliveryLat     Float
   deliveryLng     Float
-  notes           String?
+  notes                String?
+  deliveryDescription  String?
+  locationConfirmed    Boolean  @default(true)
   category        String?
   merchantId      String?
   merchant        Merchant? @relation(fields: [merchantId], references: [id])

@@ -6,8 +6,9 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Package, MapPin, Clock, Phone, ChevronDown,
-  CheckCircle, XCircle, Truck, Plus, User, FileText,
+  CheckCircle, XCircle, Truck, Plus, User, FileText, AlertTriangle,
 } from "lucide-react";
+import { LocationPickerModal } from "./LocationPickerModal";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", patisserie: "🧁", boucherie: "🥩",
@@ -29,19 +30,22 @@ interface Props {
   onAssign: (deliveryId: string, courierId: string) => void;
   onStatusChange: (deliveryId: string, action: string) => void;
   onAdd: () => void;
+  onConfirmLocation?: (deliveryId: string, lat: number, lng: number) => void;
 }
 
 // ── Single delivery card ────────────────────────────────────────────────────
 function DeliveryCard({
-  delivery, couriers, onAssign, onStatusChange,
+  delivery, couriers, onAssign, onStatusChange, onConfirmLocation,
 }: {
   delivery: Delivery;
   couriers: Courier[];
   onAssign: (deliveryId: string, courierId: string) => void;
   onStatusChange: (deliveryId: string, action: string) => void;
+  onConfirmLocation?: (deliveryId: string, lat: number, lng: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [locating, setLocating] = useState(false);
   const status = STATUS_META[delivery.status] ?? STATUS_META.pending;
   const available = couriers.filter((c) => ["available", "busy"].includes(c.status));
   const emoji = CATEGORY_EMOJI[delivery.category ?? ""] ?? "📦";
@@ -81,10 +85,17 @@ function DeliveryCard({
               <span className="font-semibold text-gray-900 text-base leading-tight truncate">
                 {delivery.customerName}
               </span>
-              <span className={`flex-shrink-0 flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${status.bg} ${status.text}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                {status.label}
-              </span>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {delivery.locationConfirmed === false && (
+                  <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                    <AlertTriangle size={10} /> À localiser
+                  </span>
+                )}
+                <span className={`flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${status.bg} ${status.text}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                  {status.label}
+                </span>
+              </div>
             </div>
 
             {/* Route */}
@@ -122,7 +133,16 @@ function DeliveryCard({
 
       {/* ── Primary action — always visible, large touch target ── */}
       {delivery.status === "pending" && (
-        <div className="px-3 pb-3 bg-white">
+        <div className="px-3 pb-3 bg-white space-y-2">
+          {delivery.locationConfirmed === false && onConfirmLocation && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLocating(true); }}
+              className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+            >
+              <MapPin size={16} />
+              Localiser sur la carte
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); setAssigning(!assigning); setExpanded(false); }}
             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
@@ -188,6 +208,17 @@ function DeliveryCard({
         </div>
       )}
 
+      {/* ── Location picker modal ── */}
+      {locating && onConfirmLocation && (
+        <LocationPickerModal
+          deliveryId={delivery.id}
+          deliveryDescription={delivery.deliveryDescription}
+          customerName={delivery.customerName}
+          onConfirm={(id, lat, lng) => { onConfirmLocation(id, lat, lng); setLocating(false); }}
+          onClose={() => setLocating(false)}
+        />
+      )}
+
       {/* ── Expanded details ── */}
       {expanded && (
         <div className="bg-gray-50 border-t border-gray-100 px-4 py-3 space-y-3">
@@ -211,6 +242,12 @@ function DeliveryCard({
                 <Phone size={14} />
                 {delivery.customerPhone}
               </a>
+            )}
+            {delivery.deliveryDescription && (
+              <div className="flex items-start gap-2 text-sm">
+                <AlertTriangle size={14} className="flex-shrink-0 mt-0.5 text-amber-500" />
+                <span className="text-amber-700 italic">{delivery.deliveryDescription}</span>
+              </div>
             )}
             {delivery.notes && (
               <div className="flex items-start gap-2 text-sm text-gray-600">
@@ -245,7 +282,7 @@ function DeliveryCard({
 }
 
 // ── Panel ───────────────────────────────────────────────────────────────────
-export function DeliveryPanel({ deliveries, couriers, onAssign, onStatusChange, onAdd }: Props) {
+export function DeliveryPanel({ deliveries, couriers, onAssign, onStatusChange, onAdd, onConfirmLocation }: Props) {
   const [activeTab, setActiveTab] = useState<"pending" | "active" | "history">("pending");
 
   const pending  = deliveries.filter((d) => d.status === "pending");
@@ -331,6 +368,7 @@ export function DeliveryPanel({ deliveries, couriers, onAssign, onStatusChange, 
               couriers={couriers}
               onAssign={onAssign}
               onStatusChange={onStatusChange}
+              onConfirmLocation={onConfirmLocation}
             />
           ))
         )}

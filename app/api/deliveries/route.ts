@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     const {
       customerName, customerPhone, pickupAddress, pickupLat, pickupLng,
       deliveryAddress, deliveryLat, deliveryLng, notes, priority, category, merchantId,
+      deliveryDescription, locationConfirmed,
     } = body;
 
     if (
@@ -50,7 +51,9 @@ export async function POST(req: NextRequest) {
         customerPhone: customerPhone || "",
         pickupAddress, pickupLat, pickupLng,
         deliveryAddress, deliveryLat, deliveryLng,
-        notes:      notes      || null,
+        notes:               notes               || null,
+        deliveryDescription: deliveryDescription || null,
+        locationConfirmed:   locationConfirmed   !== false,
         category:   category   || null,
         merchantId: merchantId || null,
         priority:   priority   || 0,

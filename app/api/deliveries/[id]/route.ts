@@ -89,6 +89,12 @@ export async function PATCH(
       }
     } else if (action === "cancel") {
       updateData = { ...updateData, status: "cancelled", courierId: null };
+    } else if (action === "confirm-location") {
+      const { lat, lng } = body;
+      if (lat === undefined || lng === undefined) {
+        return NextResponse.json({ error: "lat and lng required" }, { status: 400 });
+      }
+      updateData = { deliveryLat: lat, deliveryLng: lng, locationConfirmed: true };
     }
 
     const delivery = await prisma.delivery.update({

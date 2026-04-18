@@ -47,6 +47,8 @@ export interface Delivery {
   deliveryLat: number;
   deliveryLng: number;
   notes?: string | null;
+  deliveryDescription?: string | null;
+  locationConfirmed: boolean;
   category?: string | null;
   merchantId?: string | null;
   merchant?: { id: string; name: string; address?: string | null } | null;
