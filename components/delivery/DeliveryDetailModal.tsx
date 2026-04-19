@@ -263,10 +263,18 @@ export function DeliveryDetailModal({
             {/* Assign section */}
             {delivery.status === "pending" && (
               <div className="space-y-2">
+                {/* Block assignment if libre order has no partner yet */}
+                {isLibre && delivery.pickupAddress === "Better Call Motaz" && (
+                  <div className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs text-gray-500">
+                    <AlertTriangle size={13} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                    Renseignez le partenaire de collecte avant d&apos;assigner un coursier.
+                  </div>
+                )}
                 {!assigning ? (
                   <button
                     onClick={() => setAssigning(true)}
-                    className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl py-3.5 text-sm transition-colors"
+                    disabled={isLibre && delivery.pickupAddress === "Better Call Motaz"}
+                    className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl py-3.5 text-sm transition-colors"
                   >
                     <User size={16} />
                     Assigner un coursier
