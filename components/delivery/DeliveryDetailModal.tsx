@@ -36,6 +36,7 @@ export function DeliveryDetailModal({
   const [partnerInput, setPartnerInput]     = useState(
     delivery.pickupAddress !== "Better Call Motaz" ? delivery.pickupAddress : ""
   );
+  const [savedPickupAddress, setSavedPickupAddress] = useState(delivery.pickupAddress);
   const [savingPartner, setSavingPartner]   = useState(false);
 
   const available = couriers.filter((c) => ["available", "busy"].includes(c.status));
@@ -43,15 +44,16 @@ export function DeliveryDetailModal({
   const isLibre   = !delivery.merchantId;
 
   const savePartnerName = async () => {
-    if (!partnerInput.trim()) return;
     setSavingPartner(true);
+    const newAddress = partnerInput.trim() || "Better Call Motaz";
     try {
       await fetch(`/api/deliveries/${delivery.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pickupAddress: partnerInput.trim() }),
+        body: JSON.stringify({ pickupAddress: newAddress }),
       });
-      if (onConfirmPickup) onConfirmPickup(delivery.id, delivery.pickupLat, delivery.pickupLng);
+      setSavedPickupAddress(newAddress);
+      if (partnerInput.trim() && onConfirmPickup) onConfirmPickup(delivery.id, delivery.pickupLat, delivery.pickupLng);
     } finally {
       setSavingPartner(false);
     }
@@ -157,7 +159,7 @@ export function DeliveryDetailModal({
                       />
                       <button
                         onClick={savePartnerName}
-                        disabled={!partnerInput.trim() || savingPartner}
+                        disabled={savingPartner}
                         className="px-3 py-2 bg-gray-900 text-white text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-gray-800 transition-colors flex-shrink-0"
                       >
                         {savingPartner ? "..." : "Valider"}
@@ -264,7 +266,7 @@ export function DeliveryDetailModal({
             {delivery.status === "pending" && (
               <div className="space-y-2">
                 {/* Block assignment if libre order has no partner yet */}
-                {isLibre && delivery.pickupAddress === "Better Call Motaz" && (
+                {isLibre && savedPickupAddress === "Better Call Motaz" && (
                   <div className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs text-gray-500">
                     <AlertTriangle size={13} className="text-amber-500 flex-shrink-0 mt-0.5" />
                     Renseignez le partenaire de collecte avant d&apos;assigner un coursier.
@@ -273,7 +275,7 @@ export function DeliveryDetailModal({
                 {!assigning ? (
                   <button
                     onClick={() => setAssigning(true)}
-                    disabled={isLibre && delivery.pickupAddress === "Better Call Motaz"}
+                    disabled={isLibre && savedPickupAddress === "Better Call Motaz"}
                     className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl py-3.5 text-sm transition-colors"
                   >
                     <User size={16} />
