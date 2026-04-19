@@ -31,12 +31,31 @@ const STATUS_META: Record<string, { label: string; color: string }> = {
 export function DeliveryDetailModal({
   delivery, couriers, onClose, onAssign, onStatusChange, onConfirmLocation, onConfirmPickup,
 }: Props) {
-  const [assigning, setAssigning]         = useState(false);
+  const [assigning, setAssigning]           = useState(false);
   const [pickingLocation, setPickingLocation] = useState<"pickup" | "delivery" | null>(null);
+  const [partnerInput, setPartnerInput]     = useState(
+    delivery.pickupAddress !== "Better Call Motaz" ? delivery.pickupAddress : ""
+  );
+  const [savingPartner, setSavingPartner]   = useState(false);
 
   const available = couriers.filter((c) => ["available", "busy"].includes(c.status));
   const status    = STATUS_META[delivery.status] ?? STATUS_META.pending;
   const isLibre   = !delivery.merchantId;
+
+  const savePartnerName = async () => {
+    if (!partnerInput.trim()) return;
+    setSavingPartner(true);
+    try {
+      await fetch(`/api/deliveries/${delivery.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pickupAddress: partnerInput.trim() }),
+      });
+      if (onConfirmPickup) onConfirmPickup(delivery.id, delivery.pickupLat, delivery.pickupLng);
+    } finally {
+      setSavingPartner(false);
+    }
+  };
 
   const doAssign = (courierId: string) => {
     onAssign(delivery.id, courierId);
@@ -110,44 +129,81 @@ export function DeliveryDetailModal({
             </div>
 
             {/* Pickup */}
-            <div className="rounded-2xl border border-purple-100 overflow-hidden">
-              <div className="bg-purple-50 px-4 py-2 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-purple-700">
+            <div className="rounded-xl border border-gray-200 overflow-hidden">
+              <div className="bg-gray-50 px-4 py-2.5 flex items-center justify-between border-b border-gray-200">
+                <div className="flex items-center gap-2 text-xs font-semibold text-gray-600">
                   <Package size={13} />
                   COLLECTE
                 </div>
-                {isLibre && onConfirmPickup && (
-                  <button
-                    onClick={() => setPickingLocation("pickup")}
-                    className="text-xs bg-purple-600 text-white px-2.5 py-1 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-                  >
-                    Localiser sur maps
-                  </button>
-                )}
               </div>
-              <div className="px-4 py-3 space-y-1.5">
-                <p className="text-sm text-gray-800 font-medium">{delivery.pickupAddress}</p>
-                {delivery.merchant && (
-                  <p className="text-xs text-gray-500">{delivery.merchant.name}</p>
-                )}
-                {delivery.pickupLat !== 0 && delivery.pickupLng !== 0 && (
-                  <a
-                    href={`https://maps.google.com/?q=${delivery.pickupLat},${delivery.pickupLng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs text-purple-600 bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5 hover:bg-purple-100 transition-colors font-mono"
-                  >
-                    <MapPin size={11} className="text-purple-500 flex-shrink-0" />
-                    {delivery.pickupLat.toFixed(6)}, {delivery.pickupLng.toFixed(6)}
-                    <span className="text-purple-400 ml-1">↗</span>
-                  </a>
-                )}
-                {isLibre && (
-                  <p className="text-xs text-purple-600 italic">
-                    ⚠️ Vérifiez le lieu de collecte dans les notes avant d&apos;assigner
+
+              {isLibre ? (
+                /* Commande libre — admin choisit le partenaire */
+                <div className="px-4 py-3 space-y-3">
+                  <p className="text-xs text-gray-500 italic">
+                    Le client n&apos;a pas précisé de restaurant. Choisissez un partenaire :
                   </p>
-                )}
-              </div>
+
+                  {/* Option 1 : nom libre */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600">Nom du partenaire</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={partnerInput}
+                        onChange={(e) => setPartnerInput(e.target.value)}
+                        placeholder="Ex : Pizzeria Hassan, rue de la République..."
+                        className="flex-1 text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
+                      />
+                      <button
+                        onClick={savePartnerName}
+                        disabled={!partnerInput.trim() || savingPartner}
+                        className="px-3 py-2 bg-gray-900 text-white text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-gray-800 transition-colors flex-shrink-0"
+                      >
+                        {savingPartner ? "..." : "Valider"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-xs text-gray-400">ou</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+
+                  {/* Option 2 : localiser sur la carte */}
+                  {onConfirmPickup && (
+                    <button
+                      onClick={() => setPickingLocation("pickup")}
+                      className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 text-sm font-medium py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <MapPin size={14} />
+                      Localiser sur la carte
+                    </button>
+                  )}
+                </div>
+              ) : (
+                /* Commande marchande — afficher l'adresse et les coords */
+                <div className="px-4 py-3 space-y-1.5">
+                  <p className="text-sm text-gray-800 font-medium">{delivery.pickupAddress}</p>
+                  {delivery.merchant && (
+                    <p className="text-xs text-gray-500">{delivery.merchant.name}</p>
+                  )}
+                  {delivery.pickupLat !== 0 && delivery.pickupLng !== 0 && (
+                    <a
+                      href={`https://maps.google.com/?q=${delivery.pickupLat},${delivery.pickupLng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-100 transition-colors font-mono"
+                    >
+                      <MapPin size={11} className="text-gray-400 flex-shrink-0" />
+                      {delivery.pickupLat.toFixed(6)}, {delivery.pickupLng.toFixed(6)}
+                      <span className="text-gray-400 ml-1">↗</span>
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Delivery */}
