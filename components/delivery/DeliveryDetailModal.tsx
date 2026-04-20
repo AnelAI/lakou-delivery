@@ -141,49 +141,31 @@ export function DeliveryDetailModal({
 
               {isLibre ? (
                 /* Commande libre — admin choisit le partenaire */
-                <div className="px-4 py-3 space-y-3">
-                  <p className="text-xs text-gray-500 italic">
-                    Le client n&apos;a pas précisé de restaurant. Choisissez un partenaire :
-                  </p>
-
-                  {/* Option 1 : nom libre */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Nom du partenaire</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={partnerInput}
-                        onChange={(e) => setPartnerInput(e.target.value)}
-                        placeholder="Ex : Pizzeria Hassan, rue de la République..."
-                        className="flex-1 text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
-                      />
-                      <button
-                        onClick={savePartnerName}
-                        disabled={savingPartner}
-                        className="px-3 py-2 bg-gray-900 text-white text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-gray-800 transition-colors flex-shrink-0"
-                      >
-                        {savingPartner ? "..." : "Valider"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-px bg-gray-200" />
-                    <span className="text-xs text-gray-400">ou</span>
-                    <div className="flex-1 h-px bg-gray-200" />
-                  </div>
-
-                  {/* Option 2 : localiser sur la carte */}
-                  {onConfirmPickup && (
+                <div className="px-4 py-3 space-y-2">
+                  <label className="text-xs font-medium text-gray-600">Préciser le nom du partenaire</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={partnerInput}
+                      onChange={(e) => setPartnerInput(e.target.value)}
+                      placeholder="Ex : Pizzeria Hassan..."
+                      className="flex-1 text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
+                    />
                     <button
-                      onClick={() => setPickingLocation("pickup")}
-                      className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 text-sm font-medium py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+                      onClick={savePartnerName}
+                      disabled={savingPartner}
+                      className="px-3 py-2 bg-gray-900 text-white text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-gray-800 transition-colors flex-shrink-0"
                     >
-                      <MapPin size={14} />
-                      Localiser sur la carte
+                      {savingPartner ? "..." : "Valider"}
                     </button>
-                  )}
+                  </div>
+                  <button
+                    onClick={() => setPickingLocation("pickup")}
+                    className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-600 text-xs font-medium py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <MapPin size={13} />
+                    Localiser sur la carte
+                  </button>
                 </div>
               ) : (
                 /* Commande marchande — afficher l'adresse et les coords */
