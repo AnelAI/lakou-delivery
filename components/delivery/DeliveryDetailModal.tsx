@@ -37,6 +37,7 @@ export function DeliveryDetailModal({
     delivery.pickupAddress !== "Better Call Motaz" ? delivery.pickupAddress : ""
   );
   const [savedPickupAddress, setSavedPickupAddress] = useState(delivery.pickupAddress);
+  const [confirmedPickupCoords, setConfirmedPickupCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [savingPartner, setSavingPartner]   = useState(false);
 
   const available = couriers.filter((c) => ["available", "busy"].includes(c.status));
@@ -159,6 +160,11 @@ export function DeliveryDetailModal({
                       {savingPartner ? "..." : "Valider"}
                     </button>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-xs text-gray-400">ou</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
                   <button
                     onClick={() => setPickingLocation("pickup")}
                     className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-600 text-xs font-medium py-2 rounded-lg hover:bg-gray-50 transition-colors"
@@ -166,6 +172,18 @@ export function DeliveryDetailModal({
                     <MapPin size={13} />
                     Localiser sur la carte
                   </button>
+                  {confirmedPickupCoords && (
+                    <a
+                      href={`https://maps.google.com/?q=${confirmedPickupCoords.lat},${confirmedPickupCoords.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5 hover:bg-green-100 transition-colors font-mono"
+                    >
+                      <MapPin size={11} className="text-green-500 flex-shrink-0" />
+                      {confirmedPickupCoords.lat.toFixed(6)}, {confirmedPickupCoords.lng.toFixed(6)}
+                      <span className="text-green-400 ml-1">↗</span>
+                    </a>
+                  )}
                 </div>
               ) : (
                 /* Commande marchande — afficher l'adresse et les coords */
@@ -248,7 +266,7 @@ export function DeliveryDetailModal({
             {delivery.status === "pending" && (
               <div className="space-y-2">
                 {/* Block assignment if libre order has no partner yet */}
-                {isLibre && savedPickupAddress === "Better Call Motaz" && (
+                {isLibre && savedPickupAddress === "Better Call Motaz" && !confirmedPickupCoords && (
                   <div className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs text-gray-500">
                     <AlertTriangle size={13} className="text-amber-500 flex-shrink-0 mt-0.5" />
                     Renseignez le partenaire de collecte avant d&apos;assigner un coursier.
@@ -257,7 +275,7 @@ export function DeliveryDetailModal({
                 {!assigning ? (
                   <button
                     onClick={() => setAssigning(true)}
-                    disabled={isLibre && savedPickupAddress === "Better Call Motaz"}
+                    disabled={isLibre && savedPickupAddress === "Better Call Motaz" && !confirmedPickupCoords}
                     className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl py-3.5 text-sm transition-colors"
                   >
                     <User size={16} />
@@ -339,7 +357,10 @@ export function DeliveryDetailModal({
               : undefined
           }
           onConfirm={(id, lat, lng) => {
-            if (pickingLocation === "pickup" && onConfirmPickup) onConfirmPickup(id, lat, lng);
+            if (pickingLocation === "pickup") {
+              setConfirmedPickupCoords({ lat, lng });
+              if (onConfirmPickup) onConfirmPickup(id, lat, lng);
+            }
             if (pickingLocation === "delivery" && onConfirmLocation) onConfirmLocation(id, lat, lng);
             setPickingLocation(null);
           }}
