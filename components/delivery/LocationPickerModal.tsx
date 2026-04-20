@@ -1,11 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { useEffect, useRef, useState } from "react";
 import { X, Package, MapPin, CheckCircle } from "lucide-react";
 
 const BIZERTE_CENTER = { lat: 37.2744, lng: 9.8739 };
-const LIBRARIES: ("places")[] = [];
 
 interface Props {
   deliveryId: string;
@@ -22,23 +20,46 @@ export function LocationPickerModal({
   deliveryId, locationType, description, clientNote, customerName,
   initialCenter, onConfirm, onClose,
 }: Props) {
-  const [pin, setPin]       = useState<{ lat: number; lng: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const markerRef    = useRef<google.maps.Marker | null>(null);
+
+  const [pin, setPin]           = useState<{ lat: number; lng: number } | null>(null);
   const [adminNote, setAdminNote] = useState("");
-  const [saving, setSaving] = useState(false);
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const [saving, setSaving]     = useState(false);
 
   const isPickup = locationType === "pickup";
-  const center = initialCenter ?? BIZERTE_CENTER;
+  const center   = initialCenter ?? BIZERTE_CENTER;
 
-  const { isLoaded } = useJsApiLoader({
-    id: "google-map-script",
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
-    libraries: LIBRARIES,
-  });
+  useEffect(() => {
+    if (!containerRef.current || !window.google) return;
 
-  const onMapClick = useCallback((e: google.maps.MapMouseEvent) => {
-    if (!e.latLng) return;
-    setPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+    const map = new window.google.maps.Map(containerRef.current, {
+      center,
+      zoom: 16,
+      zoomControl: true,
+      streetViewControl: false,
+      mapTypeControl: false,
+      fullscreenControl: false,
+    });
+
+    map.addListener("click", (e: google.maps.MapMouseEvent) => {
+      if (!e.latLng) return;
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setPin({ lat, lng });
+
+      if (markerRef.current) {
+        markerRef.current.setPosition({ lat, lng });
+      } else {
+        markerRef.current = new window.google.maps.Marker({ position: { lat, lng }, map });
+      }
+    });
+
+    return () => {
+      markerRef.current?.setMap(null);
+      markerRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleConfirm = async () => {
@@ -97,31 +118,7 @@ export function LocationPickerModal({
         </p>
 
         {/* Map */}
-        <div style={{ height: 340, flexShrink: 0 }}>
-          {isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={{ width: "100%", height: "100%" }}
-              center={center}
-              zoom={16}
-              onClick={onMapClick}
-              onLoad={(map) => { mapRef.current = map; }}
-              onUnmount={() => { mapRef.current = null; }}
-              options={{
-                disableDefaultUI: false,
-                zoomControl: true,
-                streetViewControl: false,
-                mapTypeControl: false,
-                fullscreenControl: false,
-              }}
-            >
-              {pin && <Marker position={pin} />}
-            </GoogleMap>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100">
-              <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-        </div>
+        <div ref={containerRef} style={{ height: 340, flexShrink: 0 }} />
 
         {/* Coordinates */}
         {pin && (
