@@ -465,20 +465,47 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                   {/* Addresses */}
                   <div className="space-y-2">
                     {!isPickedUp && (
-                      <div className="flex items-start gap-2 bg-purple-900/20 rounded-xl p-3">
-                        <MapPin size={14} className="text-purple-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="text-xs text-purple-400 font-medium">Collecte</div>
-                          <div className="text-sm text-gray-200">{delivery.pickupAddress}</div>
+                      <div className="bg-purple-900/20 rounded-xl p-3 space-y-1.5">
+                        <div className="flex items-start gap-2">
+                          <MapPin size={14} className="text-purple-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <div className="text-xs text-purple-400 font-medium">Collecte</div>
+                            <div className="text-sm text-gray-200">{delivery.pickupAddress}</div>
+                          </div>
                         </div>
+                        {delivery.pickupLat !== 0 && delivery.pickupLng !== 0 &&
+                          delivery.pickupAddress !== "Better Call Motaz" && (
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.pickupLat},${delivery.pickupLng}&travelmode=driving`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs text-purple-300 bg-purple-900/30 border border-purple-700/40 rounded-lg px-2.5 py-1 font-mono hover:bg-purple-900/50 transition-colors"
+                          >
+                            <Navigation size={10} />
+                            {delivery.pickupLat.toFixed(5)}, {delivery.pickupLng.toFixed(5)} ↗
+                          </a>
+                        )}
                       </div>
                     )}
-                    <div className="flex items-start gap-2 bg-orange-900/20 rounded-xl p-3">
-                      <MapPin size={14} className="text-orange-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <div className="text-xs text-orange-400 font-medium">Livraison</div>
-                        <div className="text-sm text-gray-200">{delivery.deliveryAddress}</div>
+                    <div className="bg-orange-900/20 rounded-xl p-3 space-y-1.5">
+                      <div className="flex items-start gap-2">
+                        <MapPin size={14} className="text-orange-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="text-xs text-orange-400 font-medium">Livraison</div>
+                          <div className="text-sm text-gray-200">{delivery.deliveryAddress}</div>
+                        </div>
                       </div>
+                      {delivery.locationConfirmed && delivery.deliveryLat !== 0 && delivery.deliveryLng !== 0 && (
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.deliveryLat},${delivery.deliveryLng}&travelmode=driving`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs text-orange-300 bg-orange-900/30 border border-orange-700/40 rounded-lg px-2.5 py-1 font-mono hover:bg-orange-900/50 transition-colors"
+                        >
+                          <Navigation size={10} />
+                          {delivery.deliveryLat.toFixed(5)}, {delivery.deliveryLng.toFixed(5)} ↗
+                        </a>
+                      )}
                     </div>
                   </div>
 
@@ -510,29 +537,28 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
 
                   {/* Action buttons */}
                   <div className="pt-1 space-y-2">
+                    {/* Acknowledge — always visible until tapped */}
+                    {acknowledgedIds.has(delivery.id) ? (
+                      <div className="w-full flex items-center justify-center gap-2 bg-green-900/30 border border-green-700/40 text-green-400 py-2.5 rounded-xl text-sm font-medium">
+                        <CheckCircle size={15} /> Admin notifié
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => acknowledgeDelivery(delivery.id)}
+                        className="w-full bg-gray-700 hover:bg-gray-600 active:bg-gray-800 text-gray-200 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <CheckCircle size={15} />
+                        J&apos;ai pris en compte
+                      </button>
+                    )}
                     {!isPickedUp && (
-                      <>
-                        {acknowledgedIds.has(delivery.id) ? (
-                          <div className="w-full flex items-center justify-center gap-2 bg-green-900/30 border border-green-700/40 text-green-400 py-2.5 rounded-xl text-sm font-medium">
-                            <CheckCircle size={15} /> Admin notifié
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => acknowledgeDelivery(delivery.id)}
-                            className="w-full bg-gray-700 hover:bg-gray-600 active:bg-gray-800 text-gray-200 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                          >
-                            <CheckCircle size={15} />
-                            J&apos;ai pris en compte
-                          </button>
-                        )}
-                        <button
-                          onClick={() => updateDelivery(delivery.id, "pickup")}
-                          className="w-full bg-purple-700 hover:bg-purple-600 active:bg-purple-800 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
-                        >
-                          <Package size={18} />
-                          Colis récupéré
-                        </button>
-                      </>
+                      <button
+                        onClick={() => updateDelivery(delivery.id, "pickup")}
+                        className="w-full bg-purple-700 hover:bg-purple-600 active:bg-purple-800 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Package size={18} />
+                        Colis récupéré
+                      </button>
                     )}
                     {isPickedUp && (
                       <>

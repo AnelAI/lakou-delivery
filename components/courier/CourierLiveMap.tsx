@@ -112,19 +112,25 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId, showRou
     }
   }, [position]);
 
-  // Fetch OSRM routes (always compute, only display when showRoute=true)
+  // Fetch OSRM routes — always compute and display
   useEffect(() => {
     const updateRoutes = async () => {
-      if (currentTarget && position) {
+      if (currentTarget) {
         const isPickedUp = currentTarget.status === "picked_up";
         const targetLat = isPickedUp ? currentTarget.deliveryLat : currentTarget.pickupLat;
         const targetLng = isPickedUp ? currentTarget.deliveryLng : currentTarget.pickupLng;
 
-        const cacheKey = `${currentTarget.id}-${currentTarget.status}`;
+        // With GPS: courier → target. Without GPS: pickup → delivery (static overview)
+        const fromLat = position ? position.lat : currentTarget.pickupLat;
+        const fromLng = position ? position.lng : currentTarget.pickupLng;
+        const cacheKey = position
+          ? `${currentTarget.id}-${currentTarget.status}-live`
+          : `${currentTarget.id}-static`;
+
         let route = routeCacheRef.current.get(cacheKey);
         if (!route) {
           const osrmRoute = await getOsrmRoute([
-            [position.lat, position.lng],
+            [fromLat, fromLng],
             [targetLat, targetLng],
           ]);
           if (osrmRoute) {
@@ -156,7 +162,7 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId, showRou
 
     updateRoutes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deliveries, targetDeliveryId]);
+  }, [deliveries, targetDeliveryId, position?.lat, position?.lng]);
 
   const initialCenter =
     !showRoute && targetCenter
@@ -242,8 +248,8 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId, showRou
           </OverlayView>
         )}
 
-        {/* Active route — only when showRoute */}
-        {showRoute && activeRoute && activeRoute.length >= 2 && (() => {
+        {/* Active route — always shown */}
+        {activeRoute && activeRoute.length >= 2 && (() => {
           const isPickedUp = currentTarget?.status === "picked_up";
           const color = isPickedUp ? "#f97316" : "#7c3aed";
           return (
