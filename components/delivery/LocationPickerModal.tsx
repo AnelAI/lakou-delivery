@@ -1,10 +1,11 @@
 "use client";
 
-import "leaflet/dist/leaflet.css";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import { X, Package, MapPin, CheckCircle } from "lucide-react";
 
-const BIZERTE_CENTER: [number, number] = [37.2744, 9.8739];
+const BIZERTE_CENTER = { lat: 37.2744, lng: 9.8739 };
+const LIBRARIES: ("places")[] = [];
 
 interface Props {
   deliveryId: string;
@@ -21,60 +22,23 @@ export function LocationPickerModal({
   deliveryId, locationType, description, clientNote, customerName,
   initialCenter, onConfirm, onClose,
 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef       = useRef<unknown>(null);
-  const markerRef    = useRef<unknown>(null);
-
   const [pin, setPin]       = useState<{ lat: number; lng: number } | null>(null);
   const [adminNote, setAdminNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   const isPickup = locationType === "pickup";
-  const center: [number, number] = initialCenter
-    ? [initialCenter.lat, initialCenter.lng]
-    : BIZERTE_CENTER;
+  const center = initialCenter ?? BIZERTE_CENTER;
 
-  useEffect(() => {
-    if (!containerRef.current) return;
+  const { isLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
+    libraries: LIBRARIES,
+  });
 
-    // Leaflet must run client-side only
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const L = require("leaflet") as typeof import("leaflet");
-
-    // Fix broken webpack marker icons
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png").default,
-      iconUrl:       require("leaflet/dist/images/marker-icon.png").default,
-      shadowUrl:     require("leaflet/dist/images/marker-shadow.png").default,
-    });
-
-    const map = L.map(containerRef.current, { zoomControl: true }).setView(center, 16);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap",
-      maxZoom: 19,
-    }).addTo(map);
-
-    map.on("click", (e: L.LeafletMouseEvent) => {
-      const { lat, lng } = e.latlng;
-      if (markerRef.current) {
-        (markerRef.current as L.Marker).setLatLng([lat, lng]);
-      } else {
-        markerRef.current = L.marker([lat, lng]).addTo(map);
-      }
-      setPin({ lat, lng });
-    });
-
-    mapRef.current = map;
-
-    return () => {
-      map.remove();
-      mapRef.current  = null;
-      markerRef.current = null;
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const onMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return;
+    setPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
   }, []);
 
   const handleConfirm = async () => {
@@ -110,7 +74,6 @@ export function LocationPickerModal({
                 : <><MapPin size={15} className="text-gray-600 flex-shrink-0" /> Position de livraison</>}
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">{customerName}</p>
-
             {clientNote && (
               <p className="mt-2 text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
                 <span className="font-medium">Commande :</span> {clientNote}
@@ -134,7 +97,31 @@ export function LocationPickerModal({
         </p>
 
         {/* Map */}
-        <div ref={containerRef} style={{ height: 340, flexShrink: 0 }} />
+        <div style={{ height: 340, flexShrink: 0 }}>
+          {isLoaded ? (
+            <GoogleMap
+              mapContainerStyle={{ width: "100%", height: "100%" }}
+              center={center}
+              zoom={16}
+              onClick={onMapClick}
+              onLoad={(map) => { mapRef.current = map; }}
+              onUnmount={() => { mapRef.current = null; }}
+              options={{
+                disableDefaultUI: false,
+                zoomControl: true,
+                streetViewControl: false,
+                mapTypeControl: false,
+                fullscreenControl: false,
+              }}
+            >
+              {pin && <Marker position={pin} />}
+            </GoogleMap>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+              <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
 
         {/* Coordinates */}
         {pin && (
