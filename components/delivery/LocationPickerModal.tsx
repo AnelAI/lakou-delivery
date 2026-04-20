@@ -112,39 +112,39 @@ export function LocationPickerModal({
         </div>
 
         {/* Instruction */}
-        <p className="px-5 py-2 text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
+        <p className="px-5 py-2 text-xs text-gray-500 border-b border-gray-100 bg-gray-50 flex-shrink-0">
           Cliquez sur la carte pour placer l&apos;épingle
           {pin && <span className="ml-1.5 text-green-600 font-medium">· position sélectionnée</span>}
         </p>
 
         {/* Map */}
-        <div ref={containerRef} style={{ height: 340, flexShrink: 0 }} />
+        <div ref={containerRef} className="flex-1 min-h-0" style={{ minHeight: 220 }} />
 
-        {/* Coordinates */}
-        {pin && (
-          <p className="px-5 py-1.5 text-[11px] text-gray-400 font-mono border-t border-gray-100 bg-gray-50">
-            {pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}
-          </p>
-        )}
-
-        {/* Admin note for pickup */}
-        {isPickup && (
-          <div className="px-5 py-3 border-t border-gray-100">
-            <label className="text-xs font-medium text-gray-600 block mb-1.5">
-              Note de collecte (optionnel)
-            </label>
-            <input
-              type="text"
-              value={adminNote}
-              onChange={(e) => setAdminNote(e.target.value)}
-              placeholder="Ex : Pizzeria Hassan, rue de la République..."
-              className="w-full text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:bg-white transition-colors"
-            />
-          </div>
-        )}
+        {/* Coordinates + admin note */}
+        <div className="flex-shrink-0 border-t border-gray-100">
+          {pin && (
+            <p className="px-5 py-1.5 text-[11px] text-gray-400 font-mono bg-gray-50">
+              {pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}
+            </p>
+          )}
+          {isPickup && (
+            <div className="px-5 py-3 border-t border-gray-100">
+              <label className="text-xs font-medium text-gray-600 block mb-1.5">
+                Note de collecte (optionnel)
+              </label>
+              <input
+                type="text"
+                value={adminNote}
+                onChange={(e) => setAdminNote(e.target.value)}
+                placeholder="Ex : Pizzeria Hassan, rue de la République..."
+                className="w-full text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:bg-white transition-colors"
+              />
+            </div>
+          )}
+        </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 border-t border-gray-100 flex gap-2.5">
+        <div className="px-5 py-3.5 border-t border-gray-100 flex gap-2.5 flex-shrink-0">
           <button
             onClick={onClose}
             className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
