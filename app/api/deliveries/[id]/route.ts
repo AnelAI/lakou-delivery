@@ -101,6 +101,24 @@ export async function PATCH(
         return NextResponse.json({ error: "lat and lng required" }, { status: 400 });
       }
       updateData = { pickupLat: lat, pickupLng: lng, ...(address ? { pickupAddress: address } : {}) };
+    } else if (action === "acknowledge") {
+      const current = await prisma.delivery.findUnique({
+        where: { id },
+        include: { courier: true },
+      });
+      if (current?.courierId) {
+        const alert = await prisma.alert.create({
+          data: {
+            courierId: current.courierId,
+            type: "acknowledged",
+            message: `A pris en compte la course ${current.orderNumber} — ${current.customerName}`,
+            severity: "info",
+          },
+          include: { courier: true },
+        });
+        pusher.trigger(ADMIN_CHANNEL, EVENTS.ALERTS_NEW, alert).catch(console.error);
+      }
+      return NextResponse.json({ ok: true });
     }
 
     const delivery = await prisma.delivery.update({

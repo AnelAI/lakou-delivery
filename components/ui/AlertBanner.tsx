@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Alert } from "@/lib/types";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
-import { AlertTriangle, X, Clock } from "lucide-react";
+import { AlertTriangle, X, Clock, CheckCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -62,6 +62,7 @@ export function AlertBanner({ initialAlerts }: Props) {
     route_deviation: <AlertTriangle size={14} />,
     speed_violation: <AlertTriangle size={14} />,
     offline: <AlertTriangle size={14} />,
+    acknowledged: <CheckCircle size={14} />,
   };
 
   return (

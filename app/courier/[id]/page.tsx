@@ -36,6 +36,7 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [nearTarget, setNearTarget] = useState<{ delivery: Delivery; type: "pickup" | "delivery" } | null>(null);
+  const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(new Set());
   const arrivedRef = useRef<Set<string>>(new Set());
 
   // ── Fetch data ─────────────────────────────────────────────────────────────
@@ -142,6 +143,16 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
     });
     await fetchDeliveries();
     if ("vibrate" in navigator) navigator.vibrate(200);
+  };
+
+  const acknowledgeDelivery = async (deliveryId: string) => {
+    setAcknowledgedIds((prev) => new Set([...prev, deliveryId]));
+    await fetch(`/api/deliveries/${deliveryId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "acknowledge" }),
+    });
+    if ("vibrate" in navigator) navigator.vibrate(100);
   };
 
   const activeDeliveries = deliveries.filter((d) => ["assigned", "picked_up"].includes(d.status));
@@ -500,13 +511,28 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                   {/* Action buttons */}
                   <div className="pt-1 space-y-2">
                     {!isPickedUp && (
-                      <button
-                        onClick={() => updateDelivery(delivery.id, "pickup")}
-                        className="w-full bg-purple-700 hover:bg-purple-600 active:bg-purple-800 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
-                      >
-                        <Package size={18} />
-                        Colis récupéré
-                      </button>
+                      <>
+                        {acknowledgedIds.has(delivery.id) ? (
+                          <div className="w-full flex items-center justify-center gap-2 bg-green-900/30 border border-green-700/40 text-green-400 py-2.5 rounded-xl text-sm font-medium">
+                            <CheckCircle size={15} /> Admin notifié
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => acknowledgeDelivery(delivery.id)}
+                            className="w-full bg-gray-700 hover:bg-gray-600 active:bg-gray-800 text-gray-200 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <CheckCircle size={15} />
+                            J&apos;ai pris en compte
+                          </button>
+                        )}
+                        <button
+                          onClick={() => updateDelivery(delivery.id, "pickup")}
+                          className="w-full bg-purple-700 hover:bg-purple-600 active:bg-purple-800 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+                        >
+                          <Package size={18} />
+                          Colis récupéré
+                        </button>
+                      </>
                     )}
                     {isPickedUp && (
                       <>
