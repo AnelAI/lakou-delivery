@@ -7,6 +7,7 @@ import { CourierPanel } from "@/components/courier/CourierPanel";
 import { DeliveryPanel } from "@/components/delivery/DeliveryPanel";
 import { StatsBar } from "@/components/ui/StatsBar";
 import { AlertBanner } from "@/components/ui/AlertBanner";
+import { ToastContainer, type ToastData } from "@/components/ui/Toast";
 import { AddCourierForm } from "@/components/courier/AddCourierForm";
 import { AddDeliveryForm } from "@/components/delivery/AddDeliveryForm";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
@@ -48,6 +49,8 @@ export default function Dashboard() {
   const [visibleCourierIds, setVisibleCourierIds] = useState<Set<string>>(new Set()); // empty = all
   const [showAddCourier, setShowAddCourier] = useState(false);
   const [showAddDelivery, setShowAddDelivery] = useState(false);
+  const [toasts, setToasts] = useState<ToastData[]>([]);
+  const dismissToast = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id));
   const [loading, setLoading] = useState(true);
   const [mobileTab, setMobileTab] = useState<MobileTab>("map");
 
@@ -122,6 +125,10 @@ export default function Dashboard() {
     channel.bind(EVENTS.ALERTS_UPDATED, (updated: Alert) => {
       setAlerts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     });
+    channel.bind(EVENTS.DELIVERY_ACKNOWLEDGED, (data: { courierName: string; orderNumber: string; customerName: string }) => {
+      const id = `${Date.now()}`;
+      setToasts((prev) => [...prev, { id, ...data }]);
+    });
     return () => {
       channel.unbind_all();
       client.unsubscribe(ADMIN_CHANNEL);
@@ -180,6 +187,7 @@ export default function Dashboard() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {/* ── Top navbar ──────────────────────────────────────────────────────── */}
       <nav className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between z-50 flex-shrink-0 gap-2">

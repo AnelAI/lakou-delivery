@@ -106,17 +106,12 @@ export async function PATCH(
         where: { id },
         include: { courier: true },
       });
-      if (current?.courierId) {
-        const alert = await prisma.alert.create({
-          data: {
-            courierId: current.courierId,
-            type: "acknowledged",
-            message: `A pris en compte la course ${current.orderNumber} — ${current.customerName}`,
-            severity: "info",
-          },
-          include: { courier: true },
-        });
-        pusher.trigger(ADMIN_CHANNEL, EVENTS.ALERTS_NEW, alert).catch(console.error);
+      if (current?.courier) {
+        pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERY_ACKNOWLEDGED, {
+          courierName: current.courier.name,
+          orderNumber: current.orderNumber,
+          customerName: current.customerName,
+        }).catch(console.error);
       }
       return NextResponse.json({ ok: true });
     }
