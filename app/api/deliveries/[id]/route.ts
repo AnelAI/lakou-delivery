@@ -123,17 +123,8 @@ export async function PATCH(
     });
 
     pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_UPDATED, delivery).catch(console.error);
+    // Notify customer tracking page
     pusher.trigger(orderChannel(delivery.orderNumber), EVENTS.DELIVERY_STATUS_UPDATE, delivery).catch(console.error);
-
-    // Toast notification for status changes
-    if ((action === "pickup" || action === "deliver") && delivery.courier) {
-      pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERY_ACKNOWLEDGED, {
-        type: action === "pickup" ? "picked_up" : "delivered",
-        courierName: delivery.courier.name,
-        orderNumber: delivery.orderNumber,
-        customerName: delivery.customerName,
-      }).catch(console.error);
-    }
 
     return NextResponse.json(delivery);
   } catch (error) {

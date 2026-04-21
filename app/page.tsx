@@ -7,7 +7,7 @@ import { CourierPanel } from "@/components/courier/CourierPanel";
 import { DeliveryPanel } from "@/components/delivery/DeliveryPanel";
 import { StatsBar } from "@/components/ui/StatsBar";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { ToastContainer, type ToastData, type ToastType } from "@/components/ui/Toast";
+import { ToastContainer, type ToastData } from "@/components/ui/Toast";
 import { AddCourierForm } from "@/components/courier/AddCourierForm";
 import { AddDeliveryForm } from "@/components/delivery/AddDeliveryForm";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
@@ -125,9 +125,9 @@ export default function Dashboard() {
     channel.bind(EVENTS.ALERTS_UPDATED, (updated: Alert) => {
       setAlerts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     });
-    channel.bind(EVENTS.DELIVERY_ACKNOWLEDGED, (data: { type?: ToastType; courierName: string; orderNumber: string; customerName: string }) => {
-      const id = `${Date.now()}-${Math.random()}`;
-      setToasts((prev) => [...prev, { id, type: data.type ?? "acknowledged", courierName: data.courierName, orderNumber: data.orderNumber, customerName: data.customerName }]);
+    channel.bind(EVENTS.DELIVERY_ACKNOWLEDGED, (data: { courierName: string; orderNumber: string; customerName: string }) => {
+      const id = `${Date.now()}`;
+      setToasts((prev) => [...prev, { id, ...data }]);
     });
     return () => {
       channel.unbind_all();
