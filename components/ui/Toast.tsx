@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { CheckCircle, X } from "lucide-react";
 
 export interface ToastData {
@@ -26,11 +25,6 @@ export function ToastContainer({ toasts, onDismiss }: Props) {
 }
 
 function Toast({ toast, onDismiss }: { toast: ToastData; onDismiss: (id: string) => void }) {
-  useEffect(() => {
-    const timer = setTimeout(() => onDismiss(toast.id), 5000);
-    return () => clearTimeout(timer);
-  }, [toast.id, onDismiss]);
-
   return (
     <div className="flex items-start gap-3 bg-gray-900 border border-gray-700 text-white px-4 py-3 rounded-xl shadow-xl" style={{ animation: "slideIn 0.2s ease-out" }}>
       <CheckCircle size={18} className="text-green-400 flex-shrink-0 mt-0.5" />
