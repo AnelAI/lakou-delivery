@@ -537,28 +537,31 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
 
                   {/* Action buttons */}
                   <div className="pt-1 space-y-2">
-                    {/* Acknowledge — always visible until tapped */}
-                    {acknowledgedIds.has(delivery.id) ? (
-                      <div className="w-full flex items-center justify-center gap-2 bg-green-900/30 border border-green-700/40 text-green-400 py-2.5 rounded-xl text-sm font-medium">
-                        <CheckCircle size={15} /> Admin notifié
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => acknowledgeDelivery(delivery.id)}
-                        className="w-full bg-gray-700 hover:bg-gray-600 active:bg-gray-800 text-gray-200 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                      >
-                        <CheckCircle size={15} />
-                        J&apos;ai pris en compte
-                      </button>
-                    )}
                     {!isPickedUp && (
-                      <button
-                        onClick={() => updateDelivery(delivery.id, "pickup")}
-                        className="w-full bg-purple-700 hover:bg-purple-600 active:bg-purple-800 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
-                      >
-                        <Package size={18} />
-                        Colis récupéré
-                      </button>
+                      <>
+                        {!acknowledgedIds.has(delivery.id) ? (
+                          <button
+                            onClick={() => acknowledgeDelivery(delivery.id)}
+                            className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <CheckCircle size={18} />
+                            J&apos;ai pris en compte
+                          </button>
+                        ) : (
+                          <>
+                            <div className="w-full flex items-center justify-center gap-2 bg-green-900/30 border border-green-700/40 text-green-400 py-2.5 rounded-xl text-sm font-medium">
+                              <CheckCircle size={15} /> Admin notifié
+                            </div>
+                            <button
+                              onClick={() => updateDelivery(delivery.id, "pickup")}
+                              className="w-full bg-purple-700 hover:bg-purple-600 active:bg-purple-800 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+                            >
+                              <Package size={18} />
+                              Colis récupéré
+                            </button>
+                          </>
+                        )}
+                      </>
                     )}
                     {isPickedUp && (
                       <>
