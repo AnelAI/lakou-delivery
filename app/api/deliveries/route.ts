@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const {
       customerName, customerPhone, pickupAddress, pickupLat, pickupLng,
       deliveryAddress, deliveryLat, deliveryLng, notes, priority, category, merchantId,
-      deliveryDescription, locationConfirmed,
+      deliveryDescription, locationConfirmed, price,
     } = body;
 
     if (
@@ -45,18 +45,23 @@ export async function POST(req: NextRequest) {
 
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
+    const parsedPrice = price !== null && price !== undefined && price !== ""
+      ? parseFloat(String(price))
+      : null;
+
     const delivery = await prisma.delivery.create({
       data: {
         orderNumber, customerName,
         customerPhone: customerPhone || "",
-        pickupAddress, pickupLat, pickupLng,
-        deliveryAddress, deliveryLat, deliveryLng,
+        pickupAddress, pickupLat: Number(pickupLat), pickupLng: Number(pickupLng),
+        deliveryAddress, deliveryLat: Number(deliveryLat), deliveryLng: Number(deliveryLng),
         notes:               notes               || null,
         deliveryDescription: deliveryDescription || null,
         locationConfirmed:   locationConfirmed   !== false,
         category:   category   || null,
         merchantId: merchantId || null,
-        priority:   priority   || 0,
+        priority:   Number(priority)   || 0,
+        ...(parsedPrice !== null && !isNaN(parsedPrice) ? { price: parsedPrice } : {}),
       },
     });
 
@@ -64,7 +69,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(delivery, { status: 201 });
   } catch (error) {
-    console.error("Error creating delivery:", error);
-    return NextResponse.json({ error: "Failed to create delivery" }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Error creating delivery:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

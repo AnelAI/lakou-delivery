@@ -56,6 +56,7 @@ export interface Delivery {
   courierId?: string | null;
   courier?: { id: string; name: string; phone: string } | null;
   priority: number;
+  price?: number | null;
   estimatedTime?: number | null;
   distance?: number | null;
   assignedAt?: string | null;

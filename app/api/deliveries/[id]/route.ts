@@ -101,6 +101,9 @@ export async function PATCH(
         return NextResponse.json({ error: "lat and lng required" }, { status: 400 });
       }
       updateData = { pickupLat: lat, pickupLng: lng, ...(address ? { pickupAddress: address } : {}) };
+    } else if (action === "update-price") {
+      const { price } = body;
+      updateData = { price: price != null ? parseFloat(price) : null };
     } else if (action === "acknowledge") {
       const current = await prisma.delivery.findUnique({
         where: { id },

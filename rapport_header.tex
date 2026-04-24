@@ -1,0 +1,27 @@
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{fontspec}
+\setmonofont[Scale=0.85]{Consolas}
+
+\definecolor{primary}{HTML}{1a3a5c}
+\definecolor{secondary}{HTML}{2980b9}
+\definecolor{darkgray}{HTML}{555555}
+
+\titleformat{\section}{\Large\bfseries\color{primary}}{\thesection}{1em}{}[\color{secondary}\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{primary}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{darkgray}}{\thesubsubsection}{1em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\color{darkgray}\small Lakou Delivery --- Rapport Technique}
+\fancyhead[R]{\color{darkgray}\small 2026-04-23}
+\fancyfoot[C]{\color{darkgray}\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\setlength{\parskip}{6pt}

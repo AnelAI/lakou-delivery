@@ -9,24 +9,25 @@ import Link from "next/link";
 import {
   Phone, MapPin, Package, ChevronRight,
   Wifi, WifiOff, AlertTriangle, Bike, LayoutDashboard,
-  Eye, EyeOff,
+  Eye, EyeOff, Truck,
 } from "lucide-react";
 
 interface Props {
   couriers: Courier[];
   selectedId?: string | null;
   onSelect: (courier: Courier) => void;
+  onOpenDeliveries: (courier: Courier) => void;
   onAdd: () => void;
   // Map visibility
   courierColors: Map<string, string>;
-  visibleIds: Set<string>;       // empty = all visible
+  visibleIds: Set<string>;
   onToggleVisible: (id: string) => void;
   onShowAll: () => void;
   onHideAll: () => void;
 }
 
 export function CourierPanel({
-  couriers, selectedId, onSelect, onAdd,
+  couriers, selectedId, onSelect, onOpenDeliveries, onAdd,
   courierColors, visibleIds, onToggleVisible, onShowAll, onHideAll,
 }: Props) {
   const [search, setSearch] = useState("");
@@ -69,7 +70,6 @@ export function CourierPanel({
           onChange={(e) => setSearch(e.target.value)}
           className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        {/* Show all / hide all */}
         <div className="flex items-center justify-between mt-2">
           <span className="text-xs text-gray-500">
             {visibleCount}/{activeCouriers.length} affichés
@@ -97,17 +97,21 @@ export function CourierPanel({
           <div className="p-6 text-center text-gray-400 text-sm">Aucun coursier trouvé</div>
         ) : (
           sorted.map((courier) => {
-            const color    = courierColors.get(courier.id) ?? "#6b7280";
-            const visible  = isVisible(courier.id);
+            const color     = courierColors.get(courier.id) ?? "#6b7280";
+            const visible   = isVisible(courier.id);
             const isOffline = courier.status === "offline";
+            const activeCount = (courier.deliveries ?? []).filter(
+              (d) => ["assigned", "picked_up"].includes(d.status)
+            ).length;
+
             return (
               <div
                 key={courier.id}
                 className={`border-b border-gray-100 transition-colors ${
-                  !visible ? "opacity-40" : ""
-                } ${selectedId === courier.id ? "bg-blue-50" : "hover:bg-gray-50"}`}
+                  selectedId === courier.id ? "bg-blue-50" : "hover:bg-gray-50"
+                }`}
               >
-                <div className="flex items-stretch">
+                <div className={`flex items-stretch ${!visible ? "opacity-40" : ""}`} style={{ minWidth: 0 }}>
                   {/* Color swatch / visibility toggle */}
                   <button
                     onClick={() => !isOffline && onToggleVisible(courier.id)}
@@ -125,13 +129,12 @@ export function CourierPanel({
                     />
                   </button>
 
-                  {/* Main row (center on map) */}
+                  {/* Main row — click centers map */}
                   <button
                     onClick={() => onSelect(courier)}
-                    className="flex-1 text-left p-2.5 pr-3"
+                    className="flex-1 min-w-0 text-left p-2.5 overflow-hidden"
                   >
                     <div className="flex items-center gap-2">
-                      {/* Avatar with courier color */}
                       <div className="relative flex-shrink-0">
                         <div
                           className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm"
@@ -160,12 +163,16 @@ export function CourierPanel({
                             {courier.status !== "offline"
                               ? <Wifi size={11} className="text-green-500" />
                               : <WifiOff size={11} className="text-gray-400" />}
-                            <ChevronRight size={12} className="text-gray-400" />
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 mt-0.5">
                           <StatusBadge type="courier" value={courier.status} />
+                          {activeCount > 0 && (
+                            <span className="flex items-center gap-0.5 text-xs text-blue-600 font-medium">
+                              <Truck size={9} /> {activeCount}
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
@@ -198,6 +205,16 @@ export function CourierPanel({
                         )}
                       </div>
                     </div>
+                  </button>
+
+                  {/* View deliveries button — always visible, fixed width */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onOpenDeliveries(courier); }}
+                    className="w-10 flex-shrink-0 flex flex-col items-center justify-center gap-0.5 text-blue-500 hover:bg-blue-50 active:bg-blue-100 transition-colors border-l border-gray-100"
+                    title="Voir les courses"
+                  >
+                    <Truck size={14} />
+                    <ChevronRight size={11} />
                   </button>
                 </div>
               </div>

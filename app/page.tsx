@@ -10,6 +10,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { ToastContainer, type ToastData } from "@/components/ui/Toast";
 import { AddCourierForm } from "@/components/courier/AddCourierForm";
 import { AddDeliveryForm } from "@/components/delivery/AddDeliveryForm";
+import { CourierDeliveriesModal } from "@/components/courier/CourierDeliveriesModal";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import {
   Bell, RefreshCw, Users, Package, Map as MapIcon, LayoutDashboard, Store, LogOut,
@@ -46,6 +47,7 @@ export default function Dashboard() {
     activeAlerts: 0,
   });
   const [selectedCourierId, setSelectedCourierId] = useState<string | null>(null);
+  const [courierDeliveriesOpen, setCourierDeliveriesOpen] = useState<Courier | null>(null);
   const [visibleCourierIds, setVisibleCourierIds] = useState<Set<string>>(new Set()); // empty = all
   const [showAddCourier, setShowAddCourier] = useState(false);
   const [showAddDelivery, setShowAddDelivery] = useState(false);
@@ -293,6 +295,7 @@ export default function Dashboard() {
             couriers={couriers}
             selectedId={selectedCourierId}
             onSelect={(c) => setSelectedCourierId(c.id === selectedCourierId ? null : c.id)}
+            onOpenDeliveries={(c) => setCourierDeliveriesOpen(c)}
             onAdd={() => setShowAddCourier(true)}
             courierColors={courierColors}
             visibleIds={visibleCourierIds}
@@ -356,6 +359,7 @@ export default function Dashboard() {
                   setSelectedCourierId(c.id === selectedCourierId ? null : c.id);
                   setMobileTab("map");
                 }}
+                onOpenDeliveries={(c) => setCourierDeliveriesOpen(c)}
                 onAdd={() => setShowAddCourier(true)}
                 courierColors={courierColors}
                 visibleIds={visibleCourierIds}
@@ -434,6 +438,17 @@ export default function Dashboard() {
         onClose={() => setShowAddDelivery(false)}
         onSuccess={fetchAll}
       />
+      {courierDeliveriesOpen && (
+        <CourierDeliveriesModal
+          courier={courierDeliveriesOpen}
+          allCouriers={couriers}
+          onClose={() => setCourierDeliveriesOpen(null)}
+          onAssign={(id, cid) => { handleAssign(id, cid); setCourierDeliveriesOpen(null); }}
+          onStatusChange={(id, action) => { handleStatusChange(id, action); setCourierDeliveriesOpen(null); }}
+          onConfirmLocation={handleConfirmLocation}
+          onConfirmPickup={handleConfirmPickup}
+        />
+      )}
     </div>
   );
 }
