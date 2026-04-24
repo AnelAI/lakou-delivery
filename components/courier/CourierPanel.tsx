@@ -45,45 +45,49 @@ export function CourierPanel({
   const isVisible = (id: string) => visibleIds.size === 0 || visibleIds.has(id);
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-gray-200">
+    <div className="flex flex-col h-full bg-white" style={{ borderRight: "1px solid #E8E8E8" }}>
       {/* Header */}
-      <div className="p-3 border-b border-gray-200">
+      <div className="p-3" style={{ borderBottom: "1px solid #E8E8E8" }}>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="font-semibold text-gray-800 flex items-center gap-2 text-sm">
-            <Bike size={16} className="text-blue-600" />
+          <h2 className="font-semibold flex items-center gap-2 text-sm" style={{ color: "#0A0A0A", fontFamily: "Archivo, sans-serif", fontWeight: 800 }}>
+            <Bike size={15} color="#0A0A0A" />
             Coursiers
-            <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: "#0A0A0A", color: "#FFFFFF", fontSize: 10 }}>
               {couriers.length}
             </span>
           </h2>
           <button
             onClick={onAdd}
-            className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded-lg hover:bg-blue-700 transition-colors"
+            className="text-xs px-2.5 py-1 rounded-full transition-colors"
+            style={{ background: "#FF3B2F", color: "#FFFFFF", fontFamily: "Archivo, sans-serif", fontWeight: 700, border: "none", cursor: "pointer" }}
           >
             + Ajouter
           </button>
         </div>
         <input
           type="text"
-          placeholder="Rechercher..."
+          placeholder="Rechercher…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full text-sm rounded-lg px-3 py-1.5 focus:outline-none"
+          style={{ border: "1px solid #E8E8E8", background: "#F4F4F4", fontSize: 12, color: "#0A0A0A" }}
         />
         <div className="flex items-center justify-between mt-2">
-          <span className="text-xs text-gray-500">
+          <span className="text-xs" style={{ color: "#5A5A5A" }}>
             {visibleCount}/{activeCouriers.length} affichés
           </span>
           <div className="flex gap-2">
             <button
               onClick={onShowAll}
-              className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-0.5"
+              className="text-xs flex items-center gap-0.5"
+              style={{ color: "#FF3B2F", fontWeight: 700 }}
             >
               <Eye size={11} /> Tous
             </button>
             <button
               onClick={onHideAll}
-              className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
+              className="text-xs flex items-center gap-0.5"
+              style={{ color: "#8A8A8A" }}
             >
               <EyeOff size={11} /> Aucun
             </button>
@@ -107,9 +111,12 @@ export function CourierPanel({
             return (
               <div
                 key={courier.id}
-                className={`border-b border-gray-100 transition-colors ${
-                  selectedId === courier.id ? "bg-blue-50" : "hover:bg-gray-50"
-                }`}
+                className="transition-colors"
+                style={{
+                  borderBottom: "1px solid #F4F4F4",
+                  background: selectedId === courier.id ? "rgba(255,59,47,0.04)" : "transparent",
+                  borderLeft: selectedId === courier.id ? "3px solid #FF3B2F" : "3px solid transparent",
+                }}
               >
                 <div className={`flex items-stretch ${!visible ? "opacity-40" : ""}`} style={{ minWidth: 0 }}>
                   {/* Color swatch / visibility toggle */}
@@ -143,11 +150,13 @@ export function CourierPanel({
                           {courier.name.charAt(0).toUpperCase()}
                         </div>
                         <span
-                          className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${
-                            courier.status === "available" ? "bg-green-500" :
-                            courier.status === "busy"      ? "bg-blue-500"  :
-                            courier.status === "paused"    ? "bg-yellow-500": "bg-gray-400"
-                          }`}
+                          className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white"
+                          style={{
+                            background:
+                              courier.status === "available" ? "#B8FF3E" :
+                              courier.status === "busy"      ? "#FF3B2F" :
+                              courier.status === "paused"    ? "#FFB800" : "#C8C8C8"
+                          }}
                         />
                       </div>
 
@@ -161,15 +170,15 @@ export function CourierPanel({
                               <AlertTriangle size={12} className="text-red-500" />
                             )}
                             {courier.status !== "offline"
-                              ? <Wifi size={11} className="text-green-500" />
-                              : <WifiOff size={11} className="text-gray-400" />}
+                              ? <Wifi size={11} color="#3a7d00" />
+                              : <WifiOff size={11} color="#C8C8C8" />}
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 mt-0.5">
                           <StatusBadge type="courier" value={courier.status} />
                           {activeCount > 0 && (
-                            <span className="flex items-center gap-0.5 text-xs text-blue-600 font-medium">
+                            <span className="flex items-center gap-0.5 text-xs font-medium" style={{ color: "#FF3B2F" }}>
                               <Truck size={9} /> {activeCount}
                             </span>
                           )}
@@ -210,7 +219,8 @@ export function CourierPanel({
                   {/* View deliveries button — always visible, fixed width */}
                   <button
                     onClick={(e) => { e.stopPropagation(); onOpenDeliveries(courier); }}
-                    className="w-10 flex-shrink-0 flex flex-col items-center justify-center gap-0.5 text-blue-500 hover:bg-blue-50 active:bg-blue-100 transition-colors border-l border-gray-100"
+                    className="w-10 flex-shrink-0 flex flex-col items-center justify-center gap-0.5 transition-colors"
+                    style={{ color: "#8A8A8A", borderLeft: "1px solid #F4F4F4" }}
                     title="Voir les courses"
                   >
                     <Truck size={14} />
@@ -224,32 +234,33 @@ export function CourierPanel({
       </div>
 
       {/* Footer */}
-      <div className="border-t border-gray-200 bg-gray-50">
+      <div style={{ borderTop: "1px solid #E8E8E8" }}>
         <div className="p-2">
           <div className="grid grid-cols-3 gap-1.5 text-center text-xs">
             <div>
-              <div className="font-semibold text-green-600">
+              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 16, color: "#3a7d00" }}>
                 {couriers.filter((c) => c.status === "available").length}
               </div>
-              <div className="text-gray-500">Dispo</div>
+              <div style={{ fontSize: 9, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.06em" }}>Dispo</div>
             </div>
             <div>
-              <div className="font-semibold text-blue-600">
+              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 16, color: "#FF3B2F" }}>
                 {couriers.filter((c) => c.status === "busy").length}
               </div>
-              <div className="text-gray-500">En course</div>
+              <div style={{ fontSize: 9, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.06em" }}>En course</div>
             </div>
             <div>
-              <div className="font-semibold text-gray-500">
+              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 16, color: "#8A8A8A" }}>
                 {couriers.filter((c) => c.status === "offline").length}
               </div>
-              <div className="text-gray-500">Hors ligne</div>
+              <div style={{ fontSize: 9, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.06em" }}>Hors ligne</div>
             </div>
           </div>
         </div>
         <Link
           href="/couriers"
-          className="flex items-center justify-center gap-2 w-full py-2 bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
+          className="flex items-center justify-center gap-2 w-full py-2 text-xs font-medium transition-colors"
+          style={{ background: "#0A0A0A", color: "#FFFFFF", fontFamily: "Archivo, sans-serif", fontWeight: 700 }}
         >
           <LayoutDashboard size={13} />
           Tableau de bord complet

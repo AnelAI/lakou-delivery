@@ -1,10 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Archivo, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
+  weight: ["400", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -22,7 +36,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2563eb",
+  themeColor: "#FF3B2F",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -34,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${geistSans.variable} h-full antialiased`}>
+    <html lang="fr" className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}>
       <head>
         <link rel="manifest" href="/manifest-admin.json" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png" />
@@ -48,15 +62,6 @@ export default function RootLayout({
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           crossOrigin=""
         />
-        {/* Service Worker registration */}
-        <script dangerouslySetInnerHTML={{ __html: `
-          if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                .catch(function(e) { console.warn('SW registration failed', e); });
-            });
-          }
-        `}} />
       </head>
       <body className="h-full flex flex-col">{children}</body>
     </html>

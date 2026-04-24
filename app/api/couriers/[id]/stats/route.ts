@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, withRetry } from "@/lib/db";
 
 /** Tarif par livraison : 5 DT base + 2 DT × priorité */
 export function deliveryPrice(priority: number): number {
@@ -28,14 +28,14 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const courier = await prisma.courier.findUnique({
+    const courier = await withRetry(() => prisma.courier.findUnique({
       where: { id },
       select: { id: true, name: true },
-    });
+    }));
     if (!courier) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     // All delivered deliveries for this courier
-    const allDelivered = await prisma.delivery.findMany({
+    const allDelivered = await withRetry(() => prisma.delivery.findMany({
       where: { courierId: id, status: "delivered" },
       orderBy: { deliveredAt: "desc" },
       select: {
@@ -45,7 +45,7 @@ export async function GET(
         deliveredAt: true, createdAt: true, notes: true, category: true,
         merchant: { select: { name: true } },
       },
-    });
+    }));
 
     const todayStart  = startOf("day");
     const weekStart   = startOf("week");

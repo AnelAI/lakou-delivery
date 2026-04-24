@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, withRetry } from "@/lib/db";
 import { pusher, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher";
 
 export async function GET() {
@@ -7,7 +7,7 @@ export async function GET() {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const couriers = await prisma.courier.findMany({
+    const couriers = await withRetry(() => prisma.courier.findMany({
       include: {
         deliveries: {
           where: { status: { in: ["assigned", "picked_up"] } },
@@ -25,10 +25,10 @@ export async function GET() {
         },
       },
       orderBy: { name: "asc" },
-    });
+    }));
 
     // Get today's delivered count per courier in one query
-    const todayCounts = await prisma.delivery.groupBy({
+    const todayCounts = await withRetry(() => prisma.delivery.groupBy({
       by: ["courierId"],
       where: {
         status: "delivered",
@@ -36,7 +36,7 @@ export async function GET() {
         courierId: { not: null },
       },
       _count: { id: true },
-    });
+    }));
     const todayMap = new Map(todayCounts.map((r) => [r.courierId!, r._count.id]));
 
     const result = couriers.map(({ _count, ...c }) => ({

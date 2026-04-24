@@ -11,6 +11,7 @@ export default function CourierLandingPage() {
   const [inputId, setInputId] = useState("");
 
   useEffect(() => {
+    console.log("Checking for saved courier ID in localStorage");
     const id = localStorage.getItem("lakou_courier_id");
     if (id) setSavedId(id);
   }, []);

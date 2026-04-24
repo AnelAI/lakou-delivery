@@ -58,28 +58,30 @@ export default function CouriersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: "#FAFAF8", fontFamily: "Inter, sans-serif" }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white px-6 py-4" style={{ borderBottom: "1px solid #E8E8E8" }}>
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: "#5A5A5A", border: "1px solid #E8E8E8" }}
             >
               <ArrowLeft size={16} />
             </Link>
             <div>
-              <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <Bike size={20} className="text-blue-600" />
+              <h1 className="text-xl flex items-center gap-2" style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, letterSpacing: "-0.02em", color: "#0A0A0A" }}>
+                <Bike size={20} color="#FF3B2F" />
                 Gestion des coursiers
               </h1>
-              <p className="text-sm text-gray-500">{couriers.length} coursier(s) enregistré(s)</p>
+              <p className="text-sm" style={{ color: "#5A5A5A" }}>{couriers.length} coursier(s) enregistré(s)</p>
             </div>
           </div>
           <button
             onClick={() => setShowAdd(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
+            className="text-sm px-4 py-2 rounded-full transition-colors"
+            style={{ background: "#0A0A0A", color: "#FFFFFF", fontFamily: "Archivo, sans-serif", fontWeight: 700, border: "none", cursor: "pointer" }}
           >
             + Ajouter un coursier
           </button>
@@ -88,14 +90,15 @@ export default function CouriersPage() {
 
       <div className="max-w-5xl mx-auto px-6 py-6">
         {loading ? (
-          <div className="text-center py-12 text-gray-400">Chargement...</div>
+          <div className="text-center py-12" style={{ color: "#8A8A8A" }}>Chargement…</div>
         ) : couriers.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
-            <Bike size={40} className="text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">Aucun coursier enregistré</p>
+          <div className="text-center py-16 bg-white rounded-2xl" style={{ border: "1px solid #E8E8E8" }}>
+            <Bike size={40} color="#C8C8C8" className="mx-auto mb-3" />
+            <p className="font-medium" style={{ color: "#5A5A5A" }}>Aucun coursier enregistré</p>
             <button
               onClick={() => setShowAdd(true)}
-              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
+              className="mt-4 text-sm px-4 py-2 rounded-full"
+              style={{ background: "#FF3B2F", color: "#FFFFFF", fontFamily: "Archivo, sans-serif", fontWeight: 700, border: "none", cursor: "pointer" }}
             >
               Ajouter le premier coursier
             </button>
@@ -105,28 +108,39 @@ export default function CouriersPage() {
             {couriers.map((courier) => (
               <div
                 key={courier.id}
-                className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md transition-shadow"
+                className="bg-white rounded-2xl p-5 transition-shadow hover:shadow-md"
+                style={{ border: "1px solid #E8E8E8" }}
               >
                 {/* Avatar & name */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg ${
-                        courier.status === "available"
-                          ? "bg-green-500"
-                          : courier.status === "busy"
-                          ? "bg-blue-500"
-                          : courier.status === "paused"
-                          ? "bg-yellow-500"
-                          : "bg-gray-400"
-                      }`}
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg relative"
+                      style={{
+                        background:
+                          courier.status === "available" ? "#22c55e" :
+                          courier.status === "busy"      ? "#FF3B2F" :
+                          courier.status === "paused"    ? "#FFB800" :
+                                                           "#C8C8C8",
+                        fontFamily: "Archivo, sans-serif",
+                        fontWeight: 900,
+                      }}
                     >
                       {courier.name.charAt(0).toUpperCase()}
+                      <span
+                        className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white"
+                        style={{
+                          background:
+                            courier.status === "available" ? "#B8FF3E" :
+                            courier.status === "busy"      ? "#FF3B2F" :
+                            courier.status === "paused"    ? "#FFB800" : "#C8C8C8"
+                        }}
+                      />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-800">{courier.name}</h3>
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
-                        <Phone size={12} />
+                      <h3 style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 16, color: "#0A0A0A" }}>{courier.name}</h3>
+                      <div className="flex items-center gap-1 text-sm" style={{ color: "#5A5A5A", fontSize: 12, marginTop: 2 }}>
+                        <Phone size={10} />
                         {courier.phone}
                       </div>
                     </div>
@@ -134,81 +148,51 @@ export default function CouriersPage() {
                   <StatusBadge type="courier" value={courier.status} />
                 </div>
 
-                {/* Stats du jour */}
+                {/* Stats grid */}
                 <div className="grid grid-cols-4 gap-2 mb-4 text-center">
-                  <div className="bg-gray-50 rounded-lg p-2">
-                    <div className="text-lg font-bold text-blue-600">
-                      {courier.deliveries?.length ?? 0}
+                  {[
+                    { v: courier.deliveries?.length ?? 0, l: "En cours", bg: "#F4F4F4", c: "#0A0A0A" },
+                    { v: courier.deliveredToday ?? 0, l: "Auj.", bg: "rgba(255,59,47,0.08)", c: "#FF3B2F" },
+                    { v: courier.deliveredCount ?? 0, l: "Total", bg: "rgba(184,255,62,0.15)", c: "#3a7d00" },
+                    { v: courier.alerts?.length ?? 0, l: "Alertes", bg: (courier.alerts?.length ?? 0) > 0 ? "rgba(255,59,47,0.08)" : "#F4F4F4", c: (courier.alerts?.length ?? 0) > 0 ? "#FF3B2F" : "#8A8A8A" },
+                  ].map((s, i) => (
+                    <div key={i} className="rounded-lg p-2" style={{ background: s.bg }}>
+                      <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 18, color: s.c, lineHeight: 1 }}>{s.v}</div>
+                      <div style={{ fontSize: 9, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 2 }}>{s.l}</div>
                     </div>
-                    <div className="text-xs text-gray-500">En cours</div>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg p-2">
-                    <div className="text-lg font-bold text-blue-700">
-                      {courier.deliveredToday ?? 0}
-                    </div>
-                    <div className="text-xs text-blue-500">Auj.</div>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-2">
-                    <div className="text-lg font-bold text-green-600">
-                      {courier.deliveredCount ?? 0}
-                    </div>
-                    <div className="text-xs text-gray-500">Total</div>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-2">
-                    <div className="text-lg font-bold text-red-500">
-                      {courier.alerts?.length ?? 0}
-                    </div>
-                    <div className="text-xs text-gray-500">Alertes</div>
-                  </div>
+                  ))}
                 </div>
 
-                {/* Location & last seen */}
-                <div className="space-y-1 mb-4 text-xs text-gray-500">
-                  {courier.currentLat && courier.currentLng ? (
-                    <div className="flex items-center gap-1">
-                      <MapPin size={10} className="text-green-500" />
-                      <span>
-                        {courier.currentLat.toFixed(4)}, {courier.currentLng.toFixed(4)}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1 text-gray-400">
-                      <MapPin size={10} />
-                      <span>Position inconnue</span>
-                    </div>
-                  )}
+                {/* GPS */}
+                <div className="flex items-center gap-1 mb-4 text-xs" style={{ color: courier.currentLat ? "#3a7d00" : "#8A8A8A" }}>
+                  <MapPin size={10} />
+                  {courier.currentLat && courier.currentLng
+                    ? `GPS actif · ${courier.currentLat.toFixed(4)}, ${courier.currentLng.toFixed(4)}`
+                    : "Position inconnue"}
                   {courier.lastSeen && (
-                    <div>
-                      Vu{" "}
-                      {formatDistanceToNow(new Date(courier.lastSeen), {
-                        addSuffix: true,
-                        locale: fr,
-                      })}
-                    </div>
+                    <span className="ml-auto" style={{ color: "#8A8A8A" }}>
+                      {formatDistanceToNow(new Date(courier.lastSeen), { addSuffix: true, locale: fr })}
+                    </span>
                   )}
                 </div>
 
                 {/* Active alerts */}
                 {courier.alerts && courier.alerts.length > 0 && (
-                  <div className="bg-red-50 rounded-lg p-2 mb-3">
-                    <div className="flex items-center gap-1 text-red-600 text-xs font-medium mb-1">
-                      <AlertTriangle size={12} />
-                      {courier.alerts.length} alerte(s) active(s)
+                  <div className="rounded-lg p-2 mb-3" style={{ background: "rgba(255,59,47,0.08)" }}>
+                    <div className="flex items-center gap-1 text-xs font-medium mb-1" style={{ color: "#FF3B2F" }}>
+                      <AlertTriangle size={11} />
+                      {courier.alerts.length} alerte(s) active(s) — Dépassement délai
                     </div>
-                    {courier.alerts.slice(0, 2).map((a) => (
-                      <p key={a.id} className="text-xs text-red-500">
-                        • {a.message}
-                      </p>
-                    ))}
                   </div>
                 )}
 
-                {/* Action buttons */}
-                <div className="flex gap-2">
+                {/* Status select + delete */}
+                <div className="flex gap-2 mb-2">
                   <select
                     value={courier.status}
                     onChange={(e) => updateStatus(courier.id, e.target.value)}
-                    className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 text-xs rounded-lg px-2 py-1.5 focus:outline-none"
+                    style={{ border: "1px solid #E8E8E8", background: "#F4F4F4", color: "#0A0A0A" }}
                   >
                     <option value="offline">Hors ligne</option>
                     <option value="available">Disponible</option>
@@ -217,7 +201,8 @@ export default function CouriersPage() {
                   </select>
                   <button
                     onClick={() => deleteCourier(courier.id, courier.name)}
-                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-1.5 rounded-lg transition-colors"
+                    style={{ background: "rgba(255,59,47,0.08)", color: "#FF3B2F", border: "none", cursor: "pointer" }}
                     title="Supprimer"
                   >
                     <Trash2 size={14} />
@@ -225,29 +210,32 @@ export default function CouriersPage() {
                 </div>
 
                 {/* Action links */}
-                <div className="mt-2 flex gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <Link
                     href={`/couriers/${courier.id}`}
-                    className="flex-1 flex items-center justify-center gap-1 text-xs text-purple-700 hover:text-purple-900 py-1.5 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors font-semibold"
+                    className="flex items-center justify-center gap-1 text-xs py-1.5 rounded-lg font-semibold transition-colors"
+                    style={{ background: "rgba(139,92,246,0.08)", color: "#6d28d9" }}
                   >
-                    <CheckCircle size={12} />
-                    Voir détail
+                    <CheckCircle size={11} />
+                    Détail
                   </Link>
                   <Link
                     href={`/courier/${courier.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-1 text-xs text-blue-600 hover:text-blue-800 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    className="flex items-center justify-center gap-1 text-xs py-1.5 rounded-lg transition-colors"
+                    style={{ background: "rgba(59,130,246,0.08)", color: "#1d4ed8" }}
                   >
-                    <Power size={12} />
+                    <Power size={11} />
                     Tracking
                   </Link>
                   <button
                     onClick={() => shareWhatsApp(courier.id, courier.name)}
-                    className="flex-1 flex items-center justify-center gap-1 text-xs text-green-700 hover:text-green-900 py-1.5 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                    className="flex items-center justify-center gap-1 text-xs py-1.5 rounded-lg transition-colors"
+                    style={{ background: "rgba(34,197,94,0.1)", color: "#166534", border: "none", cursor: "pointer" }}
                   >
-                    <Share2 size={12} />
-                    WA
+                    <Share2 size={11} />
+                    WhatsApp
                   </button>
                 </div>
               </div>

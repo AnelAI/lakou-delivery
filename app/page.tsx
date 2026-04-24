@@ -178,25 +178,24 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
+      <div className="h-screen flex items-center justify-center" style={{ background: "#FAFAF8" }}>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-600 font-medium">Chargement de Lakou Delivery...</p>
+          <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#FF3B2F", borderTopColor: "transparent" }} />
+          <p className="font-medium" style={{ color: "#5A5A5A", fontFamily: "Archivo, sans-serif" }}>Chargement de Lakoud Delivery…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "#FAFAF8" }}>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {/* ── Top navbar ──────────────────────────────────────────────────────── */}
-      <nav className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between z-50 flex-shrink-0 gap-2">
+      <nav className="bg-white px-3 md:px-4 py-2 md:py-3 flex items-center justify-between z-50 flex-shrink-0 gap-2" style={{ borderBottom: "1px solid #E8E8E8" }}>
         {/* Logo */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <LakouLogo size={34} variant="full" />
-          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Admin</span>
         </div>
 
         {/* Stats bar — scrollable, hidden on very small screens */}
@@ -208,19 +207,21 @@ export default function Dashboard() {
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={fetchAll}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: "#5A5A5A", background: "transparent" }}
             title="Actualiser"
           >
             <RefreshCw size={15} />
           </button>
           <Link
             href="/alerts"
-            className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="relative p-2 rounded-lg transition-colors"
+            style={{ color: activeAlerts.length > 0 ? "#FF3B2F" : "#5A5A5A", background: activeAlerts.length > 0 ? "rgba(255,59,47,0.08)" : "transparent" }}
             title="Alertes"
           >
             <Bell size={15} />
             {activeAlerts.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center leading-none">
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 text-white text-xs rounded-full flex items-center justify-center leading-none" style={{ background: "#FF3B2F", border: "2px solid white" }}>
                 {activeAlerts.length > 9 ? "9+" : activeAlerts.length}
               </span>
             )}
@@ -229,16 +230,13 @@ export default function Dashboard() {
           {/* ── Courses button — toujours visible sur mobile ── */}
           <button
             onClick={() => setMobileTab("deliveries")}
-            className={`md:hidden relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-              mobileTab === "deliveries"
-                ? "bg-orange-500 text-white"
-                : "bg-orange-50 text-orange-600 border border-orange-200"
-            }`}
+            className="md:hidden relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-colors"
+            style={{ background: mobileTab === "deliveries" ? "#FF3B2F" : "rgba(255,59,47,0.08)", color: mobileTab === "deliveries" ? "#FFFFFF" : "#FF3B2F", fontFamily: "Archivo, sans-serif", fontWeight: 700, border: "none", cursor: "pointer" }}
           >
             <Package size={16} />
             Courses
             {pendingDeliveries > 0 && (
-              <span className="w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center leading-none font-bold">
+              <span className="w-4 h-4 text-white text-xs rounded-full flex items-center justify-center leading-none font-bold" style={{ background: "#FF3B2F" }}>
                 {pendingDeliveries > 9 ? "9+" : pendingDeliveries}
               </span>
             )}
@@ -246,35 +244,40 @@ export default function Dashboard() {
 
           <Link
             href="/marchands"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors"
+            style={{ background: "#0A0A0A", color: "#FFFFFF", fontFamily: "Archivo, sans-serif", fontWeight: 700 }}
           >
-            <Store size={14} />
+            <Store size={13} />
             Marchands
           </Link>
           <Link
             href="/couriers"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors"
+            style={{ background: "#FF3B2F", color: "#FFFFFF", fontFamily: "Archivo, sans-serif", fontWeight: 700 }}
           >
-            <LayoutDashboard size={14} />
+            <LayoutDashboard size={13} />
             Coursiers
           </Link>
           <Link
             href="/marchands"
-            className="sm:hidden p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+            className="sm:hidden p-2 rounded-lg transition-colors"
+            style={{ color: "#0A0A0A" }}
             title="Marchands"
           >
             <Store size={18} />
           </Link>
           <Link
             href="/couriers"
-            className="sm:hidden p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="sm:hidden p-2 rounded-lg transition-colors"
+            style={{ color: "#FF3B2F" }}
             title="Coursiers"
           >
             <LayoutDashboard size={18} />
           </Link>
           <button
             onClick={handleLogout}
-            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: "#8A8A8A" }}
             title="Se déconnecter"
           >
             <LogOut size={15} />
@@ -283,7 +286,7 @@ export default function Dashboard() {
       </nav>
 
       {/* Stats bar mobile (visible sous sm) */}
-      <div className="sm:hidden bg-white border-b border-gray-100 px-3 py-1.5 overflow-x-auto">
+      <div className="sm:hidden bg-white px-3 py-1.5 overflow-x-auto" style={{ borderBottom: "1px solid #E8E8E8" }}>
         <StatsBar initialStats={stats} />
       </div>
 
@@ -384,12 +387,11 @@ export default function Dashboard() {
         </div>
 
         {/* Bottom navigation bar */}
-        <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-50 safe-area-pb">
+        <nav className="absolute bottom-0 left-0 right-0 bg-white flex z-50 safe-area-pb" style={{ borderTop: "1px solid #E8E8E8" }}>
           <button
             onClick={() => setMobileTab("map")}
-            className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors ${
-              mobileTab === "map" ? "text-blue-600" : "text-gray-500"
-            }`}
+            className="flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors"
+            style={{ color: mobileTab === "map" ? "#FF3B2F" : "#8A8A8A" }}
           >
             <MapIcon size={20} />
             <span>Carte</span>
@@ -397,14 +399,13 @@ export default function Dashboard() {
 
           <button
             onClick={() => setMobileTab("couriers")}
-            className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors relative ${
-              mobileTab === "couriers" ? "text-blue-600" : "text-gray-500"
-            }`}
+            className="flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors relative"
+            style={{ color: mobileTab === "couriers" ? "#FF3B2F" : "#8A8A8A" }}
           >
             <Users size={20} />
             <span>Coursiers</span>
             {couriers.filter((c) => c.status !== "offline").length > 0 && (
-              <span className="absolute top-1.5 right-[calc(50%-16px)] w-4 h-4 bg-green-500 text-white text-xs rounded-full flex items-center justify-center leading-none">
+              <span className="absolute top-1.5 right-[calc(50%-16px)] w-4 h-4 text-white text-xs rounded-full flex items-center justify-center leading-none" style={{ background: "#B8FF3E", color: "#0A0A0A" }}>
                 {couriers.filter((c) => c.status !== "offline").length}
               </span>
             )}
@@ -412,14 +413,13 @@ export default function Dashboard() {
 
           <button
             onClick={() => setMobileTab("deliveries")}
-            className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors relative ${
-              mobileTab === "deliveries" ? "text-blue-600" : "text-gray-500"
-            }`}
+            className="flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors relative"
+            style={{ color: mobileTab === "deliveries" ? "#FF3B2F" : "#8A8A8A" }}
           >
             <Package size={20} />
             <span>Livraisons</span>
             {pendingDeliveries > 0 && (
-              <span className="absolute top-1.5 right-[calc(50%-16px)] w-4 h-4 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center leading-none">
+              <span className="absolute top-1.5 right-[calc(50%-16px)] w-4 h-4 text-white text-xs rounded-full flex items-center justify-center leading-none" style={{ background: "#FF3B2F" }}>
                 {pendingDeliveries}
               </span>
             )}

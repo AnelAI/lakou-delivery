@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, withRetry } from "@/lib/db";
 
 export async function GET(
   _req: NextRequest,
@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { orderNumber } = await params;
 
-    const delivery = await prisma.delivery.findUnique({
+    const delivery = await withRetry(() => prisma.delivery.findUnique({
       where: { orderNumber },
       include: {
         courier: {
@@ -24,7 +24,7 @@ export async function GET(
           },
         },
       },
-    });
+    }));
 
     if (!delivery) {
       return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });

@@ -1,4 +1,4 @@
-const CACHE_NAME = "lakou-v2";
+const CACHE_NAME = "lakou-v3";
 const STATIC_ASSETS = [
   "/",
   "/globals.css",
@@ -54,7 +54,28 @@ self.addEventListener("fetch", (event) => {
   // Socket.io: skip
   if (url.pathname.startsWith("/socket.io")) return;
 
-  // Static assets: cache-first
+  // HTML navigation: network-first (never serve stale HTML — JS chunk hashes change on rebuild)
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() =>
+        caches.match(event.request).then((cached) => cached || new Response(
+          `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hors ligne</title><style>body{background:#111827;color:white;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;flex-direction:column;gap:16px}.icon{font-size:64px}</style></head><body><div class="icon">📡</div><h2>Pas de connexion</h2><p style="color:#9ca3af;text-align:center">Reconnectez-vous à internet<br>pour utiliser l'application</p><button onclick="location.reload()" style="background:#1d4ed8;color:white;border:none;padding:12px 24px;border-radius:12px;font-size:16px;cursor:pointer">Réessayer</button></body></html>`,
+          { headers: { "Content-Type": "text/html" } }
+        ))
+      )
+    );
+    return;
+  }
+
+  // Next.js JS/CSS chunks: network-first (hashes change on rebuild)
+  if (url.pathname.startsWith("/_next/")) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Static assets (images, CDN fonts/css): cache-first
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
@@ -64,14 +85,6 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => {
-        // Offline fallback for navigation requests
-        if (event.request.mode === "navigate") {
-          return caches.match("/offline.html") || new Response(
-            `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hors ligne</title><style>body{background:#111827;color:white;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;flex-direction:column;gap:16px}.icon{font-size:64px}</style></head><body><div class="icon">📡</div><h2>Pas de connexion</h2><p style="color:#9ca3af;text-align:center">Reconnectez-vous à internet<br>pour utiliser l'application</p><button onclick="location.reload()" style="background:#1d4ed8;color:white;border:none;padding:12px 24px;border-radius:12px;font-size:16px;cursor:pointer">Réessayer</button></body></html>`,
-            { headers: { "Content-Type": "text/html" } }
-          );
-        }
       });
     })
   );

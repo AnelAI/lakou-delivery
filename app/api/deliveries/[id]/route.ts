@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, withRetry } from "@/lib/db";
 import { haversineDistance, estimateTravelTime } from "@/lib/geo";
 import { pusher, ADMIN_CHANNEL, courierChannel, orderChannel, EVENTS } from "@/lib/pusher";
 
@@ -9,10 +9,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const delivery = await prisma.delivery.findUnique({
+    const delivery = await withRetry(() => prisma.delivery.findUnique({
       where: { id },
       include: { courier: true },
-    });
+    }));
 
     if (!delivery) {
       return NextResponse.json({ error: "Delivery not found" }, { status: 404 });

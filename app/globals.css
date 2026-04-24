@@ -1,19 +1,37 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FAFAF8;
+  --foreground: #0A0A0A;
+
+  /* Lakoud design tokens */
+  --ink:        #0A0A0A;
+  --ink-80:     #1A1A1A;
+  --ink-60:     #5A5A5A;
+  --ink-40:     #8A8A8A;
+  --ink-20:     #C8C8C8;
+  --ink-10:     #E8E8E8;
+  --ink-05:     #F4F4F4;
+  --paper:      #FAFAF8;
+  --flash:      #FF3B2F;
+  --flash-dark: #C8251A;
+  --flash-soft: #FFF0EF;
+  --lime:       #B8FF3E;
+  --amber:      #FFB800;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-archivo);
+  --font-mono: var(--font-jetbrains);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-inter), Inter, sans-serif;
 }
 
 /* Leaflet map in full height containers */

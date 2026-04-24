@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, withRetry } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -10,7 +10,7 @@ export async function GET() {
       activeDeliveries,
       deliveredToday,
       activeAlerts,
-    ] = await Promise.all([
+    ] = await withRetry(() => Promise.all([
       prisma.courier.count(),
       prisma.courier.count({ where: { status: { in: ["available", "busy"] } } }),
       prisma.delivery.count({ where: { status: "pending" } }),
@@ -22,7 +22,7 @@ export async function GET() {
         },
       }),
       prisma.alert.count({ where: { resolved: false } }),
-    ]);
+    ]));
 
     return NextResponse.json({
       totalCouriers,

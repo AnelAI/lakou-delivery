@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, withRetry } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const resolved = searchParams.get("resolved");
     const courierId = searchParams.get("courierId");
 
-    const alerts = await prisma.alert.findMany({
+    const alerts = await withRetry(() => prisma.alert.findMany({
       where: {
         ...(resolved !== null ? { resolved: resolved === "true" } : {}),
         ...(courierId ? { courierId } : {}),
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
       take: 100,
-    });
+    }));
 
     return NextResponse.json(alerts);
   } catch (error) {

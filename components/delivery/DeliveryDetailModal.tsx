@@ -95,7 +95,7 @@ export function DeliveryDetailModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/50" onClick={onClose}>
         <div
           className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col"
           style={{ maxHeight: "92vh" }}

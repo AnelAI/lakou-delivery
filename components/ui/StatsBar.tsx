@@ -38,21 +38,25 @@ export function StatsBar({ initialStats }: Props) {
   }, [refreshStats]);
 
   const items = [
-    { icon: <Users size={16} />, label: "Coursiers actifs", value: `${stats.activeCouriers}/${stats.totalCouriers}`, color: "text-blue-600", bg: "bg-blue-50" },
-    { icon: <Clock size={16} />, label: "En attente", value: stats.pendingDeliveries, color: "text-orange-600", bg: "bg-orange-50" },
-    { icon: <Truck size={16} />, label: "En cours", value: stats.activeDeliveries, color: "text-purple-600", bg: "bg-purple-50" },
-    { icon: <CheckCircle size={16} />, label: "Livrées aujourd'hui", value: stats.deliveredToday, color: "text-green-600", bg: "bg-green-50" },
-    { icon: <AlertTriangle size={16} />, label: "Alertes actives", value: stats.activeAlerts, color: stats.activeAlerts > 0 ? "text-red-600" : "text-gray-400", bg: stats.activeAlerts > 0 ? "bg-red-50" : "bg-gray-50" },
+    { icon: <Users size={14} />, label: "Actifs", value: `${stats.activeCouriers}/${stats.totalCouriers}`, style: { color: "#0A0A0A", background: "#F4F4F4" } },
+    { icon: <Clock size={14} />, label: "En attente", value: stats.pendingDeliveries, style: { color: stats.pendingDeliveries > 0 ? "#FF3B2F" : "#5A5A5A", background: stats.pendingDeliveries > 0 ? "rgba(255,59,47,0.08)" : "#F4F4F4" } },
+    { icon: <Truck size={14} />, label: "En cours", value: stats.activeDeliveries, style: { color: "#0A0A0A", background: "#F4F4F4" } },
+    { icon: <CheckCircle size={14} />, label: "Livrées auj.", value: stats.deliveredToday, style: { color: "#FFFFFF", background: "#0A0A0A" } },
+    { icon: <AlertTriangle size={14} />, label: "Alertes", value: stats.activeAlerts, style: { color: stats.activeAlerts > 0 ? "#FF3B2F" : "#8A8A8A", background: stats.activeAlerts > 0 ? "rgba(255,59,47,0.08)" : "#F4F4F4" } },
   ];
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto">
+    <div className="flex items-center gap-1.5 overflow-x-auto">
       {items.map((item) => (
-        <div key={item.label} className={`flex items-center gap-2 px-3 py-2 rounded-lg ${item.bg} flex-shrink-0`}>
-          <span className={item.color}>{item.icon}</span>
+        <div
+          key={item.label}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl flex-shrink-0"
+          style={item.style}
+        >
+          <span style={{ opacity: 0.7, display: "flex" }}>{item.icon}</span>
           <div>
-            <div className={`text-lg font-bold leading-none ${item.color}`}>{item.value}</div>
-            <div className="text-xs text-gray-500 mt-0.5">{item.label}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "Archivo, sans-serif", lineHeight: 1 }}>{item.value}</div>
+            <div style={{ fontSize: 10, opacity: 0.65, marginTop: 1, textTransform: "uppercase" as const, letterSpacing: "0.06em", fontWeight: 600 }}>{item.label}</div>
           </div>
         </div>
       ))}

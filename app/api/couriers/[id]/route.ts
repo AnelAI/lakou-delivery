@@ -19,10 +19,6 @@ export async function GET(
           where: { resolved: false },
           orderBy: { createdAt: "desc" },
         },
-        locations: {
-          orderBy: { timestamp: "desc" },
-          take: 100,
-        },
       },
     });
 

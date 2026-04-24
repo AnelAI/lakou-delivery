@@ -10,6 +10,8 @@
     "seed": "tsx lib/seed.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@prisma/adapter-neon": "^7.8.0",
     "@prisma/client": "^5.22.0",
     "@react-google-maps/api": "^2.20.8",
     "@types/leaflet": "^1.9.21",

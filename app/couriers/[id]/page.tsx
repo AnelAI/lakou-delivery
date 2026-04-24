@@ -87,13 +87,16 @@ export default function CourierDetailPage({ params }: { params: Promise<{ id: st
   const [period, setPeriod]     = useState<"today" | "week" | "month" | "all">("week");
 
   useEffect(() => {
+    console.log("Fetching stats for courier", id);
     Promise.all([
       fetch(`/api/couriers`).then((r) => r.json()),
       fetch(`/api/couriers/${id}/stats`).then((r) => r.json()),
     ]).then(([couriers, s]) => {
-      const c = couriers.find((x: CourierInfo) => x.id === id);
+      const c = Array.isArray(couriers) ? couriers.find((x: CourierInfo) => x.id === id) : null;
       setCourier(c ?? null);
-      setStats(s);
+      setStats(s?.today !== undefined ? s : null);
+      setLoading(false);
+    }).catch(() => {
       setLoading(false);
     });
   }, [id]);
@@ -268,9 +271,12 @@ export default function CourierDetailPage({ params }: { params: Promise<{ id: st
 
         {/* ── Live courier dashboard preview ─────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => setLiveOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+            onKeyDown={(e) => e.key === "Enter" && setLiveOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <span className="text-sm font-bold text-gray-700 flex items-center gap-2">
               <Smartphone size={15} className="text-blue-500" />
@@ -292,7 +298,7 @@ export default function CourierDetailPage({ params }: { params: Promise<{ id: st
               )}
               {liveOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
             </div>
-          </button>
+          </div>
 
           {liveOpen && (
             <div className="px-4 pb-5 pt-1">

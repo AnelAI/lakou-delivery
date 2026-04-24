@@ -17,11 +17,11 @@ const CATEGORY_EMOJI: Record<string, string> = {
 };
 
 const STATUS_META: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  pending:   { label: "En attente", bg: "bg-yellow-50",  text: "text-yellow-700", dot: "bg-yellow-400" },
-  assigned:  { label: "Assignée",   bg: "bg-blue-50",    text: "text-blue-700",   dot: "bg-blue-500"   },
-  picked_up: { label: "En route",   bg: "bg-purple-50",  text: "text-purple-700", dot: "bg-purple-500" },
-  delivered: { label: "Livrée",     bg: "bg-green-50",   text: "text-green-700",  dot: "bg-green-500"  },
-  cancelled: { label: "Annulée",    bg: "bg-gray-100",   text: "text-gray-500",   dot: "bg-gray-400"   },
+  pending:   { label: "En attente", bg: "bg-stone-100",   text: "text-stone-600",  dot: "bg-stone-400"  },
+  assigned:  { label: "Assignée",   bg: "bg-blue-50",     text: "text-blue-700",   dot: "bg-blue-500"   },
+  picked_up: { label: "En route",   bg: "bg-purple-50",   text: "text-purple-700", dot: "bg-purple-500" },
+  delivered: { label: "Livrée",     bg: "bg-lime-100",    text: "text-green-700",  dot: "bg-lime-400"   },
+  cancelled: { label: "Annulée",    bg: "bg-red-50",      text: "text-red-600",    dot: "bg-red-400"    },
 };
 
 interface Props {
@@ -135,7 +135,7 @@ function DeliveryRow({
               <Truck size={9} /> {delivery.courier.name}
             </span>
           ) : (
-            <span className="text-xs text-gray-400">Non assignée</span>
+            <span className="text-xs font-semibold" style={{ color: "#FF3B2F", cursor: "pointer" }}>Non assignée →</span>
           )}
           <span className="text-xs text-gray-400 flex items-center gap-0.5">
             <Clock size={9} />
@@ -343,15 +343,16 @@ export function DeliveryPanel({
     <div className="flex flex-col h-full bg-gray-50 relative">
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 pt-4 pb-0">
+      <div className="bg-white px-4 pt-4 pb-0" style={{ borderBottom: "1px solid #E8E8E8" }}>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-gray-800 flex items-center gap-2">
-            <Package size={18} className="text-orange-500" />
+          <h2 className="font-bold flex items-center gap-2" style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, color: "#0A0A0A" }}>
+            <Package size={16} color="#FF3B2F" />
             Courses
           </h2>
           <button
             onClick={onAdd}
-            className="hidden md:flex items-center gap-1 text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition-colors font-semibold"
+            className="hidden md:flex items-center gap-1 text-xs px-3 py-1.5 rounded-full transition-colors font-semibold"
+            style={{ background: "#0A0A0A", color: "#FFFFFF", fontFamily: "Archivo, sans-serif", fontWeight: 700, border: "none", cursor: "pointer" }}
           >
             <Plus size={13} /> Nouvelle
           </button>
@@ -362,15 +363,18 @@ export function DeliveryPanel({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 pb-3 pt-1 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? `border-orange-500 ${tab.color}`
-                  : "border-transparent text-gray-400 hover:text-gray-600"
-              }`}
+              className="flex-1 flex items-center justify-center gap-1.5 pb-3 pt-1 text-sm font-medium border-b-2 transition-colors"
+              style={{
+                borderBottomColor: activeTab === tab.id ? "#FF3B2F" : "transparent",
+                color: activeTab === tab.id ? "#FF3B2F" : "#8A8A8A",
+              }}
             >
               {tab.label}
               {tab.count > 0 && (
-                <span className={`w-5 h-5 rounded-full text-xs text-white flex items-center justify-center font-bold ${tab.dot}`}>
+                <span
+                  className="w-5 h-5 rounded-full text-xs text-white flex items-center justify-center font-bold"
+                  style={{ background: activeTab === tab.id ? "#FF3B2F" : "#C8C8C8" }}
+                >
                   {tab.count > 9 ? "9+" : tab.count}
                 </span>
               )}
@@ -394,7 +398,8 @@ export function DeliveryPanel({
             {activeTab === "pending" && (
               <button
                 onClick={onAdd}
-                className="mt-4 flex items-center gap-2 bg-orange-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors"
+                className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-colors"
+                style={{ background: "#FF3B2F", color: "#FFFFFF", fontFamily: "Archivo, sans-serif", fontWeight: 700, border: "none", cursor: "pointer" }}
               >
                 <Plus size={16} /> Créer une course
               </button>
@@ -414,7 +419,8 @@ export function DeliveryPanel({
       {/* FAB mobile */}
       <button
         onClick={onAdd}
-        className="md:hidden absolute bottom-6 right-4 w-14 h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-10"
+        className="md:hidden absolute bottom-6 right-4 w-14 h-14 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-10"
+        style={{ background: "#FF3B2F" }}
         aria-label="Nouvelle course"
       >
         <Plus size={24} />

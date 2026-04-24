@@ -51,10 +51,10 @@ export function AlertBanner({ initialAlerts }: Props) {
 
   if (alerts.length === 0) return null;
 
-  const severityColors = {
-    critical: "bg-red-600 text-white border-red-700",
-    warning: "bg-yellow-50 text-yellow-800 border-yellow-200",
-    info: "bg-blue-50 text-blue-800 border-blue-200",
+  const severityStyles = {
+    critical: { background: "#FF3B2F", color: "#FFFFFF", border: "1px solid #C8251A", borderLeft: "4px solid #C8251A" },
+    warning:  { background: "#FFFFFF", color: "#0A0A0A", border: "1px solid rgba(255,184,0,0.3)", borderLeft: "4px solid #FFB800" },
+    info:     { background: "#FFFFFF", color: "#0A0A0A", border: "1px solid #E8E8E8", borderLeft: "4px solid #0A0A0A" },
   };
 
   const alertIcons = {
@@ -70,9 +70,8 @@ export function AlertBanner({ initialAlerts }: Props) {
       {alerts.slice(0, 5).map((alert) => (
         <div
           key={alert.id}
-          className={`flex items-start gap-3 px-4 py-3 rounded-xl border shadow-lg ${
-            severityColors[alert.severity as keyof typeof severityColors] ?? severityColors.warning
-          }`}
+          className="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg"
+          style={severityStyles[alert.severity as keyof typeof severityStyles] ?? severityStyles.warning}
         >
           <span className="flex-shrink-0 mt-0.5">
             {alertIcons[alert.type as keyof typeof alertIcons] ?? <AlertTriangle size={14} />}
