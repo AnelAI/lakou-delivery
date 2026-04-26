@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Phone, Search, MapPin, ChevronRight, Clock, Bike, X, Star, Flame, Zap } from "lucide-react";
+import { Phone, Search, MapPin, ChevronRight, Clock, Bike, X } from "lucide-react";
 import type { Merchant } from "@/lib/types";
 
 const MANAGER_PHONE = process.env.NEXT_PUBLIC_MANAGER_PHONE || "+21629461250";
@@ -35,19 +35,6 @@ const GRADIENTS: Record<string, [string, string]> = {
   course:      ["#8E44AD", "#9B59B6"],
 };
 
-// ── Derived metadata (consistent across renders) ─────────────────────────
-function merchantRating(id: string): string {
-  const n = (id.charCodeAt(0) * 13 + id.charCodeAt(1) * 7) % 12;
-  return (3.8 + n * 0.1).toFixed(1);
-}
-function deliveryMinutes(id: string): string {
-  const n = (id.charCodeAt(2) * 11 + id.charCodeAt(3) * 5) % 20;
-  const lo = 15 + n;
-  return `${lo}–${lo + 10} min`;
-}
-function isPopular(id: string): boolean { return id.charCodeAt(0) % 3 === 0; }
-function isNew(id: string): boolean     { return id.charCodeAt(1) % 5 === 0; }
-
 // ── Card components ───────────────────────────────────────────────────────
 function HeroGradient({
   category, emoji, height = 160,
@@ -77,53 +64,27 @@ function HeroGradient({
 }
 
 function MerchantCardMain({ merchant }: { merchant: Merchant }) {
-  const cat     = CATEGORIES.find((c) => c.key === merchant.category);
-  const rating  = merchantRating(merchant.id);
-  const time    = deliveryMinutes(merchant.id);
-  const popular = isPopular(merchant.id);
-  const newStore = isNew(merchant.id);
+  const cat = CATEGORIES.find((c) => c.key === merchant.category);
 
   return (
     <Link href={`/order/${merchant.id}`} className="block group">
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 active:scale-[0.98]">
-        {/* Image area */}
-        <div className="relative">
-          <HeroGradient category={merchant.category} emoji={cat?.emoji ?? "🏪"} height={160} />
-          {/* Badges */}
-          <div className="absolute top-3 left-3 flex gap-1.5">
-            {popular && (
-              <span className="flex items-center gap-1 bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md">
-                <Flame size={10} /> Populaire
-              </span>
-            )}
-            {newStore && !popular && (
-              <span className="flex items-center gap-1 bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md">
-                <Zap size={10} /> Nouveau
-              </span>
-            )}
-          </div>
-        </div>
+        <HeroGradient category={merchant.category} emoji={cat?.emoji ?? "🏪"} height={140} />
 
-        {/* Info */}
         <div className="px-4 py-3">
           <h3 className="font-bold text-gray-900 text-base leading-tight line-clamp-1 mb-1 group-hover:text-orange-600 transition-colors">
             {merchant.name}
           </h3>
 
-          {/* Meta row */}
-          <div className="flex items-center gap-3 text-sm text-gray-500 mb-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
             <span>{cat?.emoji} {cat?.label}</span>
-            <span className="flex items-center gap-0.5 text-amber-500 font-semibold">
-              <Star size={12} fill="currentColor" />
-              {rating}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock size={12} />
-              {time}
-            </span>
+            {merchant.phone && (
+              <span className="flex items-center gap-1 text-xs text-gray-400">
+                · {merchant.phone}
+              </span>
+            )}
           </div>
 
-          {/* Address */}
           {merchant.address && (
             <p className="text-xs text-gray-400 flex items-center gap-1 line-clamp-1">
               <MapPin size={10} />
@@ -131,9 +92,7 @@ function MerchantCardMain({ merchant }: { merchant: Merchant }) {
             </p>
           )}
 
-          {/* Delivery label */}
-          <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-100">
-            <span className="text-xs text-gray-400">Livraison gratuite</span>
+          <div className="flex items-center justify-end mt-3 pt-2.5 border-t border-gray-100">
             <span className="text-orange-500 font-semibold text-sm flex items-center gap-1">
               Commander <ChevronRight size={14} />
             </span>
@@ -145,9 +104,7 @@ function MerchantCardMain({ merchant }: { merchant: Merchant }) {
 }
 
 function MerchantCardFeatured({ merchant }: { merchant: Merchant }) {
-  const cat     = CATEGORIES.find((c) => c.key === merchant.category);
-  const rating  = merchantRating(merchant.id);
-  const time    = deliveryMinutes(merchant.id);
+  const cat = CATEGORIES.find((c) => c.key === merchant.category);
 
   return (
     <Link href={`/order/${merchant.id}`} className="flex-shrink-0 w-40 block group">
@@ -157,13 +114,7 @@ function MerchantCardFeatured({ merchant }: { merchant: Merchant }) {
           <p className="font-bold text-gray-900 text-xs line-clamp-2 leading-tight mb-1">
             {merchant.name}
           </p>
-          <div className="flex items-center gap-1.5 text-xs text-gray-400">
-            <Star size={10} className="text-amber-400 fill-amber-400" />
-            <span className="text-amber-500 font-semibold">{rating}</span>
-            <span>·</span>
-            <Clock size={10} />
-            <span>{time.split("–")[0]}min</span>
-          </div>
+          <p className="text-xs text-gray-400">{cat?.label}</p>
         </div>
       </div>
     </Link>
@@ -222,9 +173,6 @@ export default function MarketplacePage() {
     return () => clearTimeout(t);
   }, [fetchMerchants, search]);
 
-  // Derived sections
-  const featured = merchants.filter((m) => isPopular(m.id)).slice(0, 8);
-  const showFeatured = !search && activeCategory === "all" && featured.length > 0;
 
   return (
     <div className="min-h-screen bg-[#F6F6F6]">
@@ -329,24 +277,8 @@ export default function MarketplacePage() {
           </div>
         )}
 
-        {/* Featured horizontal scroll */}
-        {showFeatured && !loading && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-                <Flame size={18} className="text-orange-500" />
-                Populaires près de vous
-              </h2>
-            </div>
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
-              {featured.map((m) => <MerchantCardFeatured key={m.id} merchant={m} />)}
-            </div>
-          </section>
-        )}
-
         {/* Main listing */}
-        {(search || activeCategory !== "all" || !showFeatured || loading || merchants.length > 0) && (
-          <section>
+        <section>
             {!loading && merchants.length > 0 && (
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-gray-900 text-lg">
@@ -378,8 +310,7 @@ export default function MarketplacePage() {
                 {merchants.map((m) => <MerchantCardMain key={m.id} merchant={m} />)}
               </div>
             )}
-          </section>
-        )}
+        </section>
 
         {/* Track order */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">

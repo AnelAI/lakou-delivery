@@ -40,16 +40,36 @@ export async function PATCH(
       const delivery = await prisma.delivery.findUnique({ where: { id } });
 
       if (courier && delivery) {
+        // Free previous courier when reassigning
+        if (delivery.courierId && delivery.courierId !== courierId) {
+          const prevRemaining = await prisma.delivery.count({
+            where: {
+              courierId: delivery.courierId,
+              status: { in: ["assigned", "picked_up"] },
+              id: { not: id },
+            },
+          });
+          if (prevRemaining === 0) {
+            await prisma.courier.update({
+              where: { id: delivery.courierId },
+              data: { status: "available" },
+            });
+          }
+        }
+
         const startLat = courier.currentLat ?? delivery.pickupLat;
         const startLng = courier.currentLng ?? delivery.pickupLng;
         const distToPickup = haversineDistance(startLat, startLng, delivery.pickupLat, delivery.pickupLng);
         const distToDelivery = haversineDistance(delivery.pickupLat, delivery.pickupLng, delivery.deliveryLat, delivery.deliveryLng);
         const totalDist = distToPickup + distToDelivery;
 
+        // Keep existing status if delivery is already in progress (picked_up)
+        const newStatus = delivery.status === "picked_up" ? "picked_up" : "assigned";
+
         updateData = {
           ...updateData,
           courierId,
-          status: "assigned",
+          status: newStatus,
           assignedAt: new Date(),
           distance: Math.round(totalDist * 10) / 10,
           estimatedTime: estimateTravelTime(totalDist),
@@ -60,12 +80,29 @@ export async function PATCH(
           data: { status: "busy" },
         });
 
-        // Push notification to the specific courier
         pusher.trigger(courierChannel(courierId), EVENTS.DELIVERY_ASSIGNED, {
           delivery: { ...updateData, id },
           message: `Nouvelle course : ${delivery.pickupAddress} → ${delivery.deliveryAddress}`,
         }).catch(console.error);
       }
+    } else if (action === "unassign") {
+      const delivery = await prisma.delivery.findUnique({ where: { id } });
+      if (delivery?.courierId) {
+        const remaining = await prisma.delivery.count({
+          where: {
+            courierId: delivery.courierId,
+            status: { in: ["assigned", "picked_up"] },
+            id: { not: id },
+          },
+        });
+        if (remaining === 0) {
+          await prisma.courier.update({
+            where: { id: delivery.courierId },
+            data: { status: "available" },
+          });
+        }
+      }
+      updateData = { ...updateData, status: "pending", courierId: null };
     } else if (action === "pickup") {
       updateData = { ...updateData, status: "picked_up", pickedUpAt: new Date() };
     } else if (action === "deliver") {
@@ -88,6 +125,22 @@ export async function PATCH(
         }
       }
     } else if (action === "cancel") {
+      const currentDelivery = await prisma.delivery.findUnique({ where: { id } });
+      if (currentDelivery?.courierId) {
+        const remaining = await prisma.delivery.count({
+          where: {
+            courierId: currentDelivery.courierId,
+            status: { in: ["assigned", "picked_up"] },
+            id: { not: id },
+          },
+        });
+        if (remaining === 0) {
+          await prisma.courier.update({
+            where: { id: currentDelivery.courierId },
+            data: { status: "available" },
+          });
+        }
+      }
       updateData = { ...updateData, status: "cancelled", courierId: null };
     } else if (action === "confirm-location") {
       const { lat, lng } = body;
@@ -104,6 +157,10 @@ export async function PATCH(
     } else if (action === "update-price") {
       const { price } = body;
       updateData = { price: price != null ? parseFloat(price) : null };
+    } else if (action === "update-priority") {
+      updateData = { priority: parseInt(body.priority ?? "0") };
+    } else if (action === "update-notes") {
+      updateData = { notes: body.notes ?? null };
     } else if (action === "acknowledge") {
       const current = await prisma.delivery.findUnique({
         where: { id },

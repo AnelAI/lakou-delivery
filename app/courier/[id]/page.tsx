@@ -13,31 +13,35 @@ const CourierLiveMap = dynamic(
   { ssr: false }
 );
 
-// ── Design tokens (dark mode) ──────────────────────────────────────────────
+// ── Design tokens (light mode) ─────────────────────────────────────────────
 const C = {
-  bg:       "#0A0A0A",
-  bg2:      "#141414",
-  bg3:      "#1C1C1C",
-  bg4:      "#242424",
-  border:   "#2A2A2A",
-  ink:      "#FFFFFF",
-  ink60:    "rgba(255,255,255,0.6)",
-  ink40:    "rgba(255,255,255,0.4)",
-  ink20:    "rgba(255,255,255,0.2)",
-  ink10:    "rgba(255,255,255,0.08)",
-  flash:    "#FF3B2F",
-  flashBg:  "rgba(255,59,47,0.12)",
-  lime:     "#B8FF3E",
-  limeBg:   "rgba(184,255,62,0.12)",
-  amber:    "#FFB800",
-  amberBg:  "rgba(255,184,0,0.12)",
-  blue:     "#3B82F6",
-  blueBg:   "rgba(59,130,246,0.12)",
-  purple:   "#A855F7",
-  purpleBg: "rgba(168,85,247,0.12)",
+  bg:       "#F5F6FA",
+  bg2:      "#FFFFFF",
+  bg3:      "#F0F2F5",
+  bg4:      "#E4E6EB",
+  border:   "#D1D5DB",
+  ink:      "#111827",
+  ink60:    "#4B5563",
+  ink40:    "#6B7280",
+  ink20:    "#9CA3AF",
+  ink10:    "#F3F4F6",
+  flash:    "#DC2626",
+  flashBg:  "#FEF2F2",
+  flashBorder: "#FECACA",
+  lime:     "#16A34A",
+  limeBg:   "#F0FDF4",
+  limeBorder:"#BBF7D0",
+  amber:    "#D97706",
+  amberBg:  "#FFFBEB",
+  amberBorder:"#FDE68A",
+  blue:     "#2563EB",
+  blueBg:   "#EFF6FF",
+  blueBorder:"#BFDBFE",
+  purple:   "#7C3AED",
+  purpleBg: "#F5F3FF",
+  purpleBorder:"#DDD6FE",
 };
 
-// ── Arrival detection threshold ────────────────────────────────────────────
 const ARRIVAL_RADIUS_KM = 0.15;
 
 interface BeforeInstallPromptEvent extends Event {
@@ -62,7 +66,6 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchDeliveries = useCallback(async () => {
-    console.log("Fetching deliveries for courier", id);
     const res = await fetch(`/api/deliveries?courierId=${id}`);
     if (res.ok) setDeliveries(await res.json());
   }, [id]);
@@ -87,7 +90,6 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
         clearTimeout(timeout);
         setLoading(false);
       }
-      // Load deliveries independently — doesn't block the loading screen
       fetchDeliveries().catch(console.error);
     };
     init();
@@ -212,8 +214,8 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
     return (
       <div style={{ height: "100dvh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-          <div style={{ width: 40, height: 40, borderRadius: "50%", border: `4px solid ${C.flash}`, borderTopColor: "transparent" }} className="animate-spin" />
-          <p style={{ color: C.ink40, fontSize: 14, fontFamily: "Archivo, sans-serif" }}>Chargement…</p>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", border: `4px solid ${C.flash}`, borderTopColor: "transparent" }} className="animate-spin" />
+          <p style={{ color: C.ink40, fontSize: 15, fontFamily: "Archivo, sans-serif" }}>Chargement…</p>
         </div>
       </div>
     );
@@ -223,8 +225,8 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
     return (
       <div style={{ height: "100dvh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center", padding: "0 24px" }}>
-          <AlertTriangle size={40} color={C.flash} style={{ margin: "0 auto 12px" }} />
-          <p style={{ color: C.ink, fontWeight: 700, fontFamily: "Archivo, sans-serif", fontSize: 18 }}>Coursier introuvable</p>
+          <AlertTriangle size={44} color={C.flash} style={{ margin: "0 auto 12px" }} />
+          <p style={{ color: C.ink, fontWeight: 700, fontFamily: "Archivo, sans-serif", fontSize: 20 }}>Coursier introuvable</p>
           <p style={{ color: C.ink40, fontSize: 14, marginTop: 6 }}>Vérifiez le lien fourni par votre admin.</p>
         </div>
       </div>
@@ -235,35 +237,35 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
     <div style={{ height: "100dvh", maxHeight: "100dvh", background: C.bg, display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", overflow: "hidden" }}>
 
       {/* ── Header ────────────────────────────────────────────────────────────── */}
-      <header style={{ background: C.bg2, borderBottom: `1px solid ${C.border}`, padding: "10px 16px", flexShrink: 0 }}>
+      <header style={{ background: C.bg2, borderBottom: `1px solid ${C.border}`, padding: "10px 16px", flexShrink: 0, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `2px solid ${C.border}` }}>
               <img src="/logo.jpg" alt="Lakoud" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
             <div>
-              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 15, color: C.ink, lineHeight: 1 }}>{courier.name}</div>
+              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 16, color: C.ink, lineHeight: 1 }}>{courier.name}</div>
               <div style={{ fontSize: 11, color: C.ink40, marginTop: 2 }}>Coursier · Lakoud Express</div>
             </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {position && (
-              <div style={{ fontSize: 10, fontWeight: 600, color: position.accuracy < 20 ? C.lime : C.amber, display: "flex", alignItems: "center", gap: 4 }}>
-                <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 7l2-3 2 2 3-5 2 6H1Z"/></svg>
+              <div style={{ fontSize: 11, fontWeight: 600, color: position.accuracy < 20 ? C.lime : C.amber }}>
                 ±{Math.round(position.accuracy)}m
               </div>
             )}
             <div style={{
-              display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999,
-              background: trackingState === "active" ? C.limeBg : trackingState === "starting" ? C.blueBg : C.bg4,
+              display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 999,
+              background: trackingState === "active" ? C.limeBg : trackingState === "starting" ? C.blueBg : C.bg3,
               color: trackingState === "active" ? C.lime : trackingState === "starting" ? C.blue : C.ink40,
+              border: `1px solid ${trackingState === "active" ? C.limeBorder : trackingState === "starting" ? C.blueBorder : C.border}`,
               fontSize: 11, fontWeight: 700,
             }}>
               <div style={{
-                width: 6, height: 6, borderRadius: "50%",
-                background: trackingState === "active" ? C.lime : trackingState === "starting" ? C.blue : C.ink40,
-                ...(trackingState === "active" ? { boxShadow: `0 0 0 3px rgba(184,255,62,0.3)` } : {}),
+                width: 7, height: 7, borderRadius: "50%",
+                background: trackingState === "active" ? C.lime : trackingState === "starting" ? C.blue : C.ink20,
+                ...(trackingState === "active" ? { boxShadow: `0 0 0 3px rgba(22,163,74,0.25)` } : {}),
               }}/>
               {trackingState === "active" ? "En ligne" : trackingState === "starting" ? "GPS…" : "Hors ligne"}
             </div>
@@ -273,40 +275,40 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
 
       {/* ── Arrival banner ────────────────────────────────────────────────────── */}
       {nearTarget && (
-        <div style={{ background: C.flash, padding: "12px 16px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, color: C.ink }}>
-            <div style={{ fontSize: 22 }}>{nearTarget.type === "pickup" ? "📦" : "📍"}</div>
+        <div style={{ background: C.flash, padding: "14px 16px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#fff" }}>
+            <div style={{ fontSize: 26 }}>{nearTarget.type === "pickup" ? "📦" : "📍"}</div>
             <div>
-              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 14 }}>
+              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 15 }}>
                 {nearTarget.type === "pickup" ? "Point de collecte atteint !" : "Destination atteinte !"}
               </div>
-              <div style={{ fontSize: 11, opacity: 0.8 }}>{nearTarget.delivery.customerName}</div>
+              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>{nearTarget.delivery.customerName}</div>
             </div>
           </div>
           <button
             onClick={() => updateDelivery(nearTarget.delivery.id, nearTarget.type === "pickup" ? "pickup" : "deliver")}
-            style={{ background: C.ink, color: C.flash, border: "none", padding: "8px 14px", borderRadius: 999, fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 12, flexShrink: 0, cursor: "pointer" }}
+            style={{ background: "#fff", color: C.flash, border: "none", padding: "10px 16px", borderRadius: 999, fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 13, flexShrink: 0, cursor: "pointer" }}
           >
-            {nearTarget.type === "pickup" ? "Confirmer collecte" : "Confirmer livraison"}
+            {nearTarget.type === "pickup" ? "✓ Collecte OK" : "✓ Livraison OK"}
           </button>
         </div>
       )}
 
       {/* ── Map ───────────────────────────────────────────────────────────────── */}
-      <div style={{ flexShrink: 0 }}>
+      <div style={{ flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
         <button
           onClick={() => setMapExpanded(!mapExpanded)}
-          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 16px", background: "rgba(20,20,20,0.9)", color: C.ink40, fontSize: 12, border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer" }}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: C.bg2, color: C.ink60, fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer" }}
         >
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Navigation size={12} color={C.ink40} />
+            <Navigation size={14} color={C.blue} />
             Carte en temps réel
           </span>
-          {mapExpanded ? <ChevronUp size={14} color={C.ink40} /> : <ChevronDown size={14} color={C.ink40} />}
+          {mapExpanded ? <ChevronUp size={16} color={C.ink40} /> : <ChevronDown size={16} color={C.ink40} />}
         </button>
 
         {mapExpanded && (
-          <div style={{ height: 220, background: "#1A2030", position: "relative" }}>
+          <div style={{ height: 240, background: "#E8EDF2", position: "relative" }}>
             <CourierLiveMap
               position={position ? { lat: position.lat, lng: position.lng, accuracy: position.accuracy, heading: position.heading } : null}
               deliveries={activeDeliveries}
@@ -317,15 +319,16 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
               <button
                 onClick={() => setShowRoute((v) => !v)}
                 style={{
-                  position: "absolute", bottom: 8, right: 8, zIndex: 10,
-                  padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600,
+                  position: "absolute", bottom: 10, right: 10, zIndex: 10,
+                  padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
                   display: "flex", alignItems: "center", gap: 4, cursor: "pointer",
-                  background: showRoute ? C.flash : "rgba(0,0,0,0.7)",
-                  color: showRoute ? C.ink : C.ink40,
+                  background: showRoute ? C.flash : C.bg2,
+                  color: showRoute ? "#fff" : C.ink,
                   border: showRoute ? "none" : `1px solid ${C.border}`,
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
                 }}
               >
-                <Navigation size={10} />
+                <Navigation size={11} />
                 {showRoute ? "Masquer trajet" : "Voir trajet"}
               </button>
             )}
@@ -337,57 +340,57 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
       {isTracking && position && (() => {
         const info = currentTarget ? getDistanceToTarget(currentTarget) : null;
         return (
-          <div style={{ margin: "12px 14px 0", background: C.bg3, borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-            <div style={{ textAlign: "center", flexShrink: 0 }}>
-              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 900, fontSize: 36, color: C.ink, lineHeight: 1 }}>{Math.round(position.speed)}</div>
-              <div style={{ fontSize: 10, color: C.ink40, textTransform: "uppercase", letterSpacing: "0.08em" }}>km/h</div>
+          <div style={{ margin: "12px 14px 0", background: C.bg2, borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, border: `1px solid ${C.border}`, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+            <div style={{ textAlign: "center", flexShrink: 0, minWidth: 52 }}>
+              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 900, fontSize: 38, color: C.ink, lineHeight: 1 }}>{Math.round(position.speed)}</div>
+              <div style={{ fontSize: 10, color: C.ink40, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>km/h</div>
             </div>
             {info && currentTarget && (
-              <div style={{ flex: 1, background: C.bg4, borderRadius: 12, padding: "10px 12px" }}>
-                <div style={{ fontSize: 10, color: C.ink40, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 4 }}>
-                  {currentTarget.status === "picked_up" ? "🏠" : "📦"} {currentTarget.status === "picked_up" ? "Livraison suivante" : "Collecte suivante"}
+              <div style={{ flex: 1, background: C.bg3, borderRadius: 12, padding: "10px 12px", border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 11, color: C.ink40, fontWeight: 700, marginBottom: 4 }}>
+                  {currentTarget.status === "picked_up" ? "🏠 Livraison suivante" : "📦 Collecte suivante"}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, color: C.flash, fontWeight: 700, fontSize: 13 }}>
-                    <MapPin size={12} color={C.flash} />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, color: C.flash, fontWeight: 800, fontSize: 15 }}>
+                    <MapPin size={13} color={C.flash} />
                     {info.dist}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, color: C.ink40, fontSize: 11 }}>
-                    <Clock size={10} color={C.ink40} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, color: C.ink40, fontSize: 12 }}>
+                    <Clock size={11} />
                     ~{info.etaMin} min
                   </div>
                 </div>
-                <div style={{ fontSize: 11, color: C.ink40, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 12, color: C.ink60, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {currentTarget.status === "picked_up" ? currentTarget.deliveryAddress : currentTarget.pickupAddress}
                 </div>
               </div>
             )}
             <div style={{ textAlign: "center", flexShrink: 0 }}>
-              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 700, fontSize: 13, color: position.accuracy < 20 ? C.lime : C.amber }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: position.accuracy < 20 ? C.lime : C.amber }}>
                 ±{Math.round(position.accuracy)}m
               </div>
-              <div style={{ fontSize: 10, color: C.ink40, textTransform: "uppercase", letterSpacing: "0.06em" }}>GPS</div>
+              <div style={{ fontSize: 10, color: C.ink40, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>GPS</div>
             </div>
           </div>
         );
       })()}
 
       {/* ── Tracking CTA ─────────────────────────────────────────────────────── */}
-      <div style={{ padding: "14px 14px 0", flexShrink: 0 }}>
+      <div style={{ padding: "12px 14px 0", flexShrink: 0 }}>
         <button
           onClick={isTracking ? stop : start}
           disabled={trackingState === "starting"}
           style={{
-            width: "100%", padding: "20px", borderRadius: 18,
+            width: "100%", padding: "18px", borderRadius: 16,
             fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 17,
             cursor: trackingState === "starting" ? "wait" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
             transition: "all 0.15s",
             ...(trackingState === "active"
-              ? { background: C.bg3, color: C.flash, border: `2px solid ${C.flash}` }
+              ? { background: C.flashBg, color: C.flash, border: `2px solid ${C.flash}` }
               : trackingState === "starting"
-              ? { background: C.blueBg, color: C.blue, border: "none" }
-              : { background: C.flash, color: C.ink, border: "none", boxShadow: "0 8px 24px rgba(255,59,47,0.3)" }
+              ? { background: C.blueBg, color: C.blue, border: `2px solid ${C.blueBorder}` }
+              : { background: C.flash, color: "#fff", border: "none", boxShadow: "0 6px 20px rgba(220,38,38,0.3)" }
             ),
           }}
         >
@@ -398,7 +401,7 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
         </button>
 
         {errorMsg && (
-          <div style={{ marginTop: 8, background: C.flashBg, border: `1px solid rgba(255,59,47,0.3)`, color: C.flash, borderRadius: 12, padding: "12px 14px", fontSize: 13, display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <div style={{ marginTop: 8, background: C.flashBg, border: `1px solid ${C.flashBorder}`, color: C.flash, borderRadius: 12, padding: "12px 14px", fontSize: 13, display: "flex", alignItems: "flex-start", gap: 8 }}>
             <AlertTriangle size={16} color={C.flash} style={{ flexShrink: 0, marginTop: 1 }} />
             {errorMsg}
           </div>
@@ -406,34 +409,32 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
       </div>
 
       {/* ── Deliveries ────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
         {activeDeliveries.length === 0 ? (
           <>
-            {/* Empty state */}
-            <div style={{ margin: "20px 14px", background: C.bg2, borderRadius: 20, padding: "32px 20px", textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🏍️</div>
-              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 20, color: C.ink, marginBottom: 8 }}>Prêt à livrer !</div>
-              <div style={{ fontSize: 13, color: C.ink40, lineHeight: 1.5, maxWidth: 240, margin: "0 auto" }}>
+            <div style={{ margin: "20px 14px", background: C.bg2, borderRadius: 20, padding: "32px 20px", textAlign: "center", border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 52, marginBottom: 16 }}>🏍️</div>
+              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 22, color: C.ink, marginBottom: 8 }}>Prêt à livrer !</div>
+              <div style={{ fontSize: 14, color: C.ink40, lineHeight: 1.6, maxWidth: 240, margin: "0 auto" }}>
                 Aucune course assignée pour l&apos;instant. L&apos;admin vous enverra une notification dès qu&apos;une course est disponible.
               </div>
               {isTracking && (
-                <div style={{ marginTop: 20, padding: "10px 16px", background: C.limeBg, borderRadius: 12, display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, color: C.lime, fontWeight: 700 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.lime, boxShadow: `0 0 0 4px rgba(184,255,62,0.2)` }}/>
+                <div style={{ marginTop: 20, padding: "10px 18px", background: C.limeBg, border: `1px solid ${C.limeBorder}`, borderRadius: 12, display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: C.lime, fontWeight: 700 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.lime, boxShadow: `0 0 0 4px rgba(22,163,74,0.2)` }}/>
                   Tracking GPS actif
                 </div>
               )}
             </div>
 
-            {/* Stats */}
-            <div style={{ margin: "0 14px 12px", background: C.bg3, borderRadius: 16, padding: "14px 16px", display: "flex", justifyContent: "space-around" }}>
+            <div style={{ margin: "0 14px 12px", background: C.bg2, borderRadius: 16, padding: "16px", display: "flex", justifyContent: "space-around", border: `1px solid ${C.border}` }}>
               {[
                 { v: courier.deliveredToday ?? 0, l: "Livrées auj.", c: C.lime },
-                { v: courier.deliveredCount ?? 0, l: "Total", c: C.ink },
-                { v: "4.9★", l: "Note", c: C.amber },
+                { v: courier.deliveredCount ?? 0, l: "Total",       c: C.ink },
+                { v: "4.9★",                      l: "Note",        c: C.amber },
               ].map((s) => (
                 <div key={s.l} style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 22, color: s.c, lineHeight: 1 }}>{s.v}</div>
-                  <div style={{ fontSize: 10, color: C.ink40, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>{s.l}</div>
+                  <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 24, color: s.c, lineHeight: 1 }}>{s.v}</div>
+                  <div style={{ fontSize: 11, color: C.ink40, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4, fontWeight: 600 }}>{s.l}</div>
                 </div>
               ))}
             </div>
@@ -456,45 +457,61 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                     style={{
                       margin: "12px 14px 0",
                       borderRadius: 20, overflow: "hidden",
-                      border: `1px solid ${isFirst ? C.flash + "60" : C.border}`,
+                      border: `2px solid ${isFirst ? C.flash : C.border}`,
                       background: C.bg2,
+                      boxShadow: isFirst ? "0 4px 16px rgba(220,38,38,0.1)" : "0 1px 4px rgba(0,0,0,0.06)",
                     }}
                   >
                     {/* Card header */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: C.bg3, borderBottom: `1px solid ${C.border}` }}>
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "10px 14px",
+                      background: isFirst ? "#FFF5F5" : C.bg3,
+                      borderBottom: `1px solid ${isFirst ? C.flashBorder : C.border}`,
+                    }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {isFirst && <span style={{ fontSize: 10, background: C.flash, color: C.ink, padding: "2px 8px", borderRadius: 999, fontWeight: 800, fontFamily: "Archivo, sans-serif" }}>SUIVANTE</span>}
-                        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 11, color: C.ink40 }}>{delivery.orderNumber}</span>
+                        {isFirst && (
+                          <span style={{ fontSize: 10, background: C.flash, color: "#fff", padding: "3px 9px", borderRadius: 999, fontWeight: 800, fontFamily: "Archivo, sans-serif" }}>
+                            SUIVANTE
+                          </span>
+                        )}
+                        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 12, color: C.ink60, fontWeight: 600 }}>
+                          {delivery.orderNumber}
+                        </span>
                       </div>
                       <span style={{
-                        fontSize: 11, padding: "3px 10px", borderRadius: 999, fontWeight: 700,
+                        fontSize: 12, padding: "4px 11px", borderRadius: 999, fontWeight: 700,
                         background: isPickedUp ? C.amberBg : C.blueBg,
                         color: isPickedUp ? C.amber : C.blue,
+                        border: `1px solid ${isPickedUp ? C.amberBorder : C.blueBorder}`,
                       }}>
-                        {isPickedUp ? "En route" : "À récupérer"}
+                        {isPickedUp ? "🏃 En route" : "📦 À récupérer"}
                       </span>
                     </div>
 
-                    <div style={{ padding: 14 }}>
-                      {/* Client */}
+                    <div style={{ padding: "14px" }}>
+                      {/* Client info */}
                       {!isMulti && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                          <div style={{ width: 38, height: 38, borderRadius: 12, background: C.bg4, display: "flex", alignItems: "center", justifyContent: "center", color: C.ink, fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 16, flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, padding: "10px 12px", background: C.bg3, borderRadius: 12, border: `1px solid ${C.border}` }}>
+                          <div style={{ width: 42, height: 42, borderRadius: 12, background: C.ink, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
                             {delivery.customerName.charAt(0)}
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: 14, color: C.ink }}>{delivery.customerName}</div>
+                            <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{delivery.customerName}</div>
                             {delivery.customerPhone && (
-                              <a href={`tel:${delivery.customerPhone}`} style={{ fontSize: 11, color: C.blue, display: "flex", alignItems: "center", gap: 4, marginTop: 2, textDecoration: "none" }}>
-                                <Phone size={10} color={C.blue} />
+                              <a
+                                href={`tel:${delivery.customerPhone}`}
+                                style={{ fontSize: 14, color: C.blue, display: "flex", alignItems: "center", gap: 5, marginTop: 3, textDecoration: "none", fontWeight: 600 }}
+                              >
+                                <Phone size={13} color={C.blue} />
                                 {delivery.customerPhone}
                               </a>
                             )}
                           </div>
                           {delivery.price != null && (
-                            <div style={{ textAlign: "right" }}>
-                              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 16, color: C.ink }}>{delivery.price.toFixed(3)}</div>
-                              <div style={{ fontSize: 10, color: C.ink40 }}>DT</div>
+                            <div style={{ textAlign: "right", background: C.limeBg, border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "6px 10px" }}>
+                              <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 17, color: C.lime, lineHeight: 1 }}>{delivery.price.toFixed(3)}</div>
+                              <div style={{ fontSize: 10, color: C.lime, fontWeight: 600, marginTop: 1 }}>DT</div>
                             </div>
                           )}
                         </div>
@@ -502,51 +519,70 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
 
                       {/* Pickup address */}
                       {!isPickedUp && (
-                        <div style={{ background: C.purpleBg, borderRadius: 14, padding: "10px 12px", marginBottom: 8 }}>
-                          <div style={{ fontSize: 10, color: C.purple, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginBottom: 6 }}>📦 Collecte</div>
-                          <div style={{ fontSize: 13, color: C.ink, marginBottom: 6 }}>{delivery.pickupAddress}</div>
-                          {delivery.pickupLat !== 0 && delivery.pickupLng !== 0 && delivery.pickupAddress !== "Better Call Motaz" && (
+                        <div style={{ background: C.purpleBg, borderRadius: 14, padding: "12px 14px", marginBottom: 10, border: `1px solid ${C.purpleBorder}` }}>
+                          <div style={{ fontSize: 11, color: C.purple, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800, marginBottom: 6 }}>📦 COLLECTE</div>
+                          {delivery.merchant && (
+                            <div style={{ fontSize: 13, color: C.purple, fontWeight: 700, marginBottom: 4 }}>
+                              🏪 {delivery.merchant.name}
+                            </div>
+                          )}
+                          <div style={{ fontSize: 15, color: C.ink, fontWeight: 600, lineHeight: 1.4, marginBottom: 8 }}>
+                            {delivery.pickupAddress}
+                          </div>
+                          {delivery.pickupLat !== 0 && delivery.pickupLng !== 0 && (
                             <a
                               href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.pickupLat},${delivery.pickupLng}&travelmode=driving`}
                               target="_blank" rel="noopener noreferrer"
-                              style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: "JetBrains Mono, monospace", fontSize: 10, color: C.purple, textDecoration: "none" }}
+                              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px", borderRadius: 10, background: C.purple, color: "#fff", textDecoration: "none", fontSize: 14, fontWeight: 700, fontFamily: "Archivo, sans-serif" }}
                             >
-                              <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M1 5h8M7 3l2 2-2 2"/></svg>
-                              {delivery.pickupLat.toFixed(5)}, {delivery.pickupLng.toFixed(5)} ↗
+                              <Navigation size={15} color="#fff" />
+                              Naviguer — Collecte
                             </a>
                           )}
                         </div>
                       )}
 
                       {/* Delivery address */}
-                      <div style={{ background: C.amberBg, borderRadius: 14, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ fontSize: 10, color: C.amber, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginBottom: 6 }}>🏠 Livraison</div>
-                        <div style={{ fontSize: 13, color: C.ink, marginBottom: 6 }}>{delivery.deliveryAddress}</div>
-                        {delivery.locationConfirmed && delivery.deliveryLat !== 0 && delivery.deliveryLng !== 0 && (
+                      <div style={{ background: C.amberBg, borderRadius: 14, padding: "12px 14px", marginBottom: 10, border: `1px solid ${C.amberBorder}` }}>
+                        <div style={{ fontSize: 11, color: C.amber, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800, marginBottom: 6 }}>🏠 LIVRAISON</div>
+                        <div style={{ fontSize: 15, color: C.ink, fontWeight: 600, lineHeight: 1.4, marginBottom: delivery.deliveryDescription ? 6 : 8 }}>
+                          {delivery.deliveryAddress}
+                        </div>
+                        {delivery.deliveryDescription && (
+                          <div style={{ fontSize: 13, color: C.amber, fontWeight: 500, lineHeight: 1.4, marginBottom: 8, padding: "8px 10px", background: "rgba(255,255,255,0.6)", borderRadius: 8 }}>
+                            📍 {delivery.deliveryDescription}
+                          </div>
+                        )}
+                        {delivery.locationConfirmed && delivery.deliveryLat !== 0 && delivery.deliveryLng !== 0 && isPickedUp && (
                           <a
                             href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.deliveryLat},${delivery.deliveryLng}&travelmode=driving`}
                             target="_blank" rel="noopener noreferrer"
-                            style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: "JetBrains Mono, monospace", fontSize: 10, color: C.amber, textDecoration: "none" }}
+                            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", borderRadius: 10, background: C.amber, color: "#fff", textDecoration: "none", fontSize: 15, fontWeight: 800, fontFamily: "Archivo, sans-serif" }}
                           >
-                            <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M1 5h8M7 3l2 2-2 2"/></svg>
-                            {delivery.deliveryLat.toFixed(5)}, {delivery.deliveryLng.toFixed(5)} ↗
+                            <Navigation size={17} color="#fff" />
+                            Naviguer vers le client
                           </a>
+                        )}
+                        {!delivery.locationConfirmed && (
+                          <div style={{ fontSize: 12, color: C.amber, fontWeight: 600, padding: "6px 10px", background: "rgba(255,255,255,0.5)", borderRadius: 8 }}>
+                            ⚠️ Localisation à confirmer sur place
+                          </div>
                         )}
                       </div>
 
                       {/* Distance/ETA */}
                       {distInfo && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.bg4, borderRadius: 12, padding: "10px 12px", marginBottom: 8 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4, color: C.flash, fontWeight: 700, fontSize: 13 }}>
-                            <Navigation size={12} color={C.flash} />
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.bg3, borderRadius: 12, padding: "11px 14px", marginBottom: 10, border: `1px solid ${C.border}` }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, color: C.flash, fontWeight: 800, fontSize: 16 }}>
+                            <Navigation size={14} color={C.flash} />
                             {distInfo.dist}
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4, color: C.ink40, fontSize: 11 }}>
-                            <Clock size={10} color={C.ink40} />
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, color: C.ink60, fontSize: 14 }}>
+                            <Clock size={13} />
                             ~{distInfo.etaMin} min
                           </div>
                           {delivery.distance && (
-                            <div style={{ marginLeft: "auto", fontSize: 11, color: C.ink40 }}>
+                            <div style={{ marginLeft: "auto", fontSize: 12, color: C.ink40, fontWeight: 500 }}>
                               {delivery.distance} km total
                             </div>
                           )}
@@ -555,34 +591,34 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
 
                       {/* Notes */}
                       {delivery.notes && (
-                        <div style={{ background: C.amberBg, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 11, color: C.amber, fontStyle: "italic" }}>
+                        <div style={{ background: "#FFFBEB", border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 10, fontSize: 13, color: C.amber, fontWeight: 500, lineHeight: 1.5 }}>
                           📝 {delivery.notes}
                         </div>
                       )}
 
                       {/* Action buttons */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 2 }}>
                         {!isPickedUp && (
                           <>
                             {!acknowledgedIds.has(delivery.id) ? (
                               <button
                                 onClick={() => acknowledgeDelivery(delivery.id)}
-                                style={{ width: "100%", padding: "14px", borderRadius: 14, background: C.blueBg, color: C.blue, border: `1px solid rgba(59,130,246,0.3)`, fontFamily: "Archivo, sans-serif", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}
+                                style={{ width: "100%", padding: "16px", borderRadius: 14, background: C.blueBg, color: C.blue, border: `2px solid ${C.blueBorder}`, fontFamily: "Archivo, sans-serif", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}
                               >
-                                <CheckCircle size={16} color={C.blue} />
+                                <CheckCircle size={18} color={C.blue} />
                                 J&apos;ai pris en compte
                               </button>
                             ) : (
                               <>
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "rgba(184,255,62,0.08)", border: `1px solid rgba(184,255,62,0.2)`, color: C.lime, padding: "10px", borderRadius: 12, fontSize: 13, fontWeight: 600 }}>
-                                  <CheckCircle size={14} color={C.lime} /> Admin notifié
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.limeBg, border: `1px solid ${C.limeBorder}`, color: C.lime, padding: "10px", borderRadius: 12, fontSize: 13, fontWeight: 700 }}>
+                                  <CheckCircle size={15} color={C.lime} /> Admin notifié ✓
                                 </div>
                                 <button
                                   onClick={() => updateDelivery(delivery.id, "pickup")}
-                                  style={{ width: "100%", padding: "14px", borderRadius: 14, background: C.flash, color: C.ink, border: "none", fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,59,47,0.25)" }}
+                                  style={{ width: "100%", padding: "18px", borderRadius: 14, background: C.flash, color: "#fff", border: "none", fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, cursor: "pointer", boxShadow: "0 4px 16px rgba(220,38,38,0.25)" }}
                                 >
-                                  <Package size={18} color={C.ink} />
-                                  Colis récupéré
+                                  <Package size={20} color="#fff" />
+                                  Colis récupéré ✓
                                 </button>
                               </>
                             )}
@@ -590,22 +626,22 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                         )}
                         {isPickedUp && (
                           <>
-                            {delivery.locationConfirmed && (
+                            {delivery.locationConfirmed && delivery.deliveryLat !== 0 && delivery.deliveryLng !== 0 && (
                               <a
                                 href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.deliveryLat},${delivery.deliveryLng}&travelmode=driving`}
                                 target="_blank" rel="noopener noreferrer"
-                                style={{ width: "100%", padding: "14px", borderRadius: 14, background: C.blueBg, color: C.blue, border: `1px solid rgba(59,130,246,0.3)`, fontFamily: "Archivo, sans-serif", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}
+                                style={{ width: "100%", padding: "16px", borderRadius: 14, background: C.blueBg, color: C.blue, border: `2px solid ${C.blueBorder}`, fontFamily: "Archivo, sans-serif", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}
                               >
-                                <Navigation size={16} color={C.blue} />
+                                <Navigation size={18} color={C.blue} />
                                 Naviguer vers le client
                               </a>
                             )}
                             <button
                               onClick={() => updateDelivery(delivery.id, "deliver")}
-                              style={{ width: "100%", padding: "14px", borderRadius: 14, background: C.lime, color: C.bg, border: "none", fontFamily: "Archivo, sans-serif", fontWeight: 900, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}
+                              style={{ width: "100%", padding: "20px", borderRadius: 14, background: C.lime, color: "#fff", border: "none", fontFamily: "Archivo, sans-serif", fontWeight: 900, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, cursor: "pointer", boxShadow: "0 4px 16px rgba(22,163,74,0.3)" }}
                             >
-                              <CheckCircle size={18} color={C.bg} />
-                              Course livrée !
+                              <CheckCircle size={22} color="#fff" />
+                              Course livrée ! ✓
                             </button>
                           </>
                         )}
@@ -618,26 +654,26 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
               if (!isMulti) return renderDeliveryCard(group.deliveries[0], globalIndexOffset);
 
               return (
-                <div key={group.key} style={{ margin: "12px 14px 0", borderRadius: 20, overflow: "hidden", border: `1px solid ${C.purple}40`, background: C.bg2 }}>
+                <div key={group.key} style={{ margin: "12px 14px 0", borderRadius: 20, overflow: "hidden", border: `2px solid ${C.purpleBorder}`, background: C.bg2, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                   {/* Group header */}
                   <button
                     onClick={() => setExpandedGroups((prev) => { const next = new Set(prev); if (next.has(group.key)) next.delete(group.key); else next.add(group.key); return next; })}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: C.purpleBg, borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left", border: "none" }}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px", background: C.purpleBg, borderBottom: `1px solid ${C.purpleBorder}`, cursor: "pointer", textAlign: "left", border: "none" }}
                   >
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: C.bg4, display: "flex", alignItems: "center", justifyContent: "center", color: C.ink, fontFamily: "Archivo, sans-serif", fontWeight: 800, flexShrink: 0 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: C.purple, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
                       {group.customerName.charAt(0)}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, color: C.ink, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.customerName}</div>
+                      <div style={{ fontWeight: 700, color: C.ink, fontSize: 16, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.customerName}</div>
                       {group.customerPhone && (
-                        <a href={`tel:${group.customerPhone}`} onClick={(e) => e.stopPropagation()} style={{ fontSize: 11, color: C.blue, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-                          <Phone size={10} color={C.blue} />{group.customerPhone}
+                        <a href={`tel:${group.customerPhone}`} onClick={(e) => e.stopPropagation()} style={{ fontSize: 13, color: C.blue, display: "flex", alignItems: "center", gap: 4, textDecoration: "none", fontWeight: 600, marginTop: 2 }}>
+                          <Phone size={12} color={C.blue} />{group.customerPhone}
                         </a>
                       )}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                      <span style={{ fontSize: 11, background: C.bg4, color: C.purple, padding: "2px 8px", borderRadius: 999, fontWeight: 600 }}>{group.deliveries.length} courses</span>
-                      {isExpanded ? <ChevronUp size={16} color={C.ink40} /> : <ChevronDown size={16} color={C.ink40} />}
+                      <span style={{ fontSize: 12, background: C.purple, color: "#fff", padding: "4px 10px", borderRadius: 999, fontWeight: 700 }}>{group.deliveries.length} courses</span>
+                      {isExpanded ? <ChevronUp size={18} color={C.ink40} /> : <ChevronDown size={18} color={C.ink40} />}
                     </div>
                   </button>
 
@@ -649,7 +685,7 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                   {!isExpanded && (
                     <div style={{ padding: "10px 14px", display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {group.deliveries.map((d) => (
-                        <span key={d.id} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, fontFamily: "JetBrains Mono, monospace", background: d.status === "picked_up" ? C.amberBg : C.blueBg, color: d.status === "picked_up" ? C.amber : C.blue }}>
+                        <span key={d.id} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 999, fontFamily: "JetBrains Mono, monospace", fontWeight: 600, background: d.status === "picked_up" ? C.amberBg : C.blueBg, color: d.status === "picked_up" ? C.amber : C.blue, border: `1px solid ${d.status === "picked_up" ? C.amberBorder : C.blueBorder}` }}>
                           {d.orderNumber}
                         </span>
                       ))}
@@ -662,22 +698,22 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
             {/* Completed today */}
             {deliveries.filter((d) => d.status === "delivered").length > 0 && (
               <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
-                <span style={{ fontSize: 12, color: C.ink40, background: C.bg2, padding: "6px 14px", borderRadius: 999 }}>
+                <span style={{ fontSize: 13, color: C.lime, background: C.limeBg, border: `1px solid ${C.limeBorder}`, padding: "7px 16px", borderRadius: 999, fontWeight: 700 }}>
                   ✓ {deliveries.filter((d) => d.status === "delivered").length} course(s) livrée(s) aujourd&apos;hui
                 </span>
               </div>
             )}
 
             {/* Stats */}
-            <div style={{ margin: "12px 14px 8px", background: C.bg3, borderRadius: 16, padding: "14px 16px", display: "flex", justifyContent: "space-around" }}>
+            <div style={{ margin: "12px 14px 8px", background: C.bg2, borderRadius: 16, padding: "16px", display: "flex", justifyContent: "space-around", border: `1px solid ${C.border}` }}>
               {[
                 { v: courier.deliveredToday ?? 0, l: "Livrées auj.", c: C.lime },
-                { v: courier.deliveredCount ?? 0, l: "Total", c: C.ink },
-                { v: "4.9★", l: "Note", c: C.amber },
+                { v: courier.deliveredCount ?? 0, l: "Total",       c: C.ink },
+                { v: "4.9★",                      l: "Note",        c: C.amber },
               ].map((s) => (
                 <div key={s.l} style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 22, color: s.c, lineHeight: 1 }}>{s.v}</div>
-                  <div style={{ fontSize: 10, color: C.ink40, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>{s.l}</div>
+                  <div style={{ fontFamily: "Archivo, sans-serif", fontWeight: 800, fontSize: 24, color: s.c, lineHeight: 1 }}>{s.v}</div>
+                  <div style={{ fontSize: 11, color: C.ink40, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4, fontWeight: 600 }}>{s.l}</div>
                 </div>
               ))}
             </div>
@@ -689,10 +725,10 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
 
       {/* ── PWA install banner ────────────────────────────────────────────────── */}
       {installPrompt && !isInstalled && (
-        <div style={{ margin: "0 14px 14px", background: C.bg3, border: `1px solid ${C.border}`, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <Download size={16} color={C.blue} />
-          <span style={{ flex: 1, fontSize: 12, color: C.ink60 }}>Installer l&apos;app sur cet appareil</span>
-          <button onClick={handleInstall} style={{ background: C.blue, color: C.ink, border: "none", padding: "6px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+        <div style={{ margin: "0 14px 14px", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <Download size={18} color={C.blue} />
+          <span style={{ flex: 1, fontSize: 13, color: C.ink60, fontWeight: 500 }}>Installer l&apos;app sur cet appareil</span>
+          <button onClick={handleInstall} style={{ background: C.blue, color: "#fff", border: "none", padding: "8px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
             Installer
           </button>
         </div>

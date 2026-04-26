@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Phone, MapPin, Navigation, ChevronLeft, CheckCircle,
-  ChevronRight, Globe, Star, Clock, Send, X, Flame, Pencil,
+  ChevronRight, Globe, Send, X, Pencil,
 } from "lucide-react";
 import type { Merchant } from "@/lib/types";
 
@@ -34,16 +34,6 @@ const GRADIENTS: Record<string, [string, string]> = {
   eau:         ["#00B4DB", "#0083B0"],
   course:      ["#8E44AD", "#9B59B6"],
 };
-
-function merchantRating(id: string): string {
-  const n = (id.charCodeAt(0) * 13 + id.charCodeAt(1) * 7) % 12;
-  return (3.8 + n * 0.1).toFixed(1);
-}
-function deliveryRange(id: string): string {
-  const n = (id.charCodeAt(2) * 11 + id.charCodeAt(3) * 5) % 20;
-  const lo = 15 + n;
-  return `${lo}–${lo + 10} min`;
-}
 
 type Step = "detail" | "order" | "success";
 type LocationMode = "gps" | "description";
@@ -157,8 +147,6 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
 
   const cat     = CAT_META[merchant.category] ?? { label: "Marchand", emoji: "🏪" };
   const [c1, c2] = GRADIENTS[merchant.category] ?? ["#636e72", "#b2bec3"];
-  const rating  = merchantRating(merchant.id);
-  const time    = deliveryRange(merchant.id);
 
   // ── Success ──────────────────────────────────────────────────────────────
   if (step === "success") {
@@ -215,37 +203,10 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
 
         {/* Title card */}
         <div className="bg-white rounded-3xl p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-1">{merchant.name}</h1>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}>
-                  {cat.emoji} {cat.label}
-                </span>
-                {(merchant.id.charCodeAt(0) % 3 === 0) && (
-                  <span className="flex items-center gap-1 text-xs font-semibold text-orange-500 bg-orange-50 px-2.5 py-1 rounded-full">
-                    <Flame size={10} /> Populaire
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-amber-500 font-bold text-lg mb-0.5">
-                <Star size={16} fill="currentColor" />{rating}
-              </div>
-              <p className="text-xs text-gray-400">Note</p>
-            </div>
-            <div className="text-center border-x border-gray-100">
-              <div className="font-bold text-gray-900 text-lg mb-0.5">{time.split("–")[0]}<span className="text-sm">min</span></div>
-              <p className="text-xs text-gray-400">Livraison</p>
-            </div>
-            <div className="text-center">
-              <div className="font-bold text-gray-900 text-lg mb-0.5">0 DT</div>
-              <p className="text-xs text-gray-400">Frais</p>
-            </div>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-2">{merchant.name}</h1>
+          <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}>
+            {cat.emoji} {cat.label}
+          </span>
         </div>
 
         {/* Info card */}
@@ -274,12 +235,6 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
               <p className="text-sm text-gray-700 group-hover:text-blue-600 truncate transition-colors">{merchant.website}</p>
             </a>
           )}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Clock size={15} className="text-gray-400" />
-            </div>
-            <p className="text-sm text-gray-700">Livraison estimée : <span className="font-semibold text-gray-900">{time}</span></p>
-          </div>
         </div>
 
         {/* CTA */}
@@ -303,7 +258,7 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
                 <span className="text-3xl">{cat.emoji}</span>
                 <div>
                   <p className="text-white font-bold text-base leading-tight">{merchant.name}</p>
-                  <p className="text-white/80 text-xs">{time} · Livraison gratuite</p>
+                  <p className="text-white/80 text-xs">{cat.label} · Livraison à domicile</p>
                 </div>
               </div>
               <button onClick={() => setStep("detail")} className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">

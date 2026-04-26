@@ -6,7 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Package, MapPin, Clock, Truck, Plus, AlertTriangle,
-  ChevronRight, ChevronDown, Phone, DollarSign,
+  ChevronRight, ChevronDown, Phone, DollarSign, Search, X,
 } from "lucide-react";
 import { DeliveryDetailModal } from "./DeliveryDetailModal";
 
@@ -325,12 +325,27 @@ export function DeliveryPanel({
 }: Props) {
   const [activeTab, setActiveTab]           = useState<"pending" | "active" | "history">("pending");
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
+  const [searchQuery, setSearchQuery]       = useState("");
 
   const pending = deliveries.filter((d) => d.status === "pending");
   const active  = deliveries.filter((d) => ["assigned", "picked_up"].includes(d.status));
   const history = deliveries.filter((d) => ["delivered", "cancelled"].includes(d.status));
 
-  const displayList = activeTab === "pending" ? pending : activeTab === "active" ? active : history;
+  const baseList = activeTab === "pending" ? pending : activeTab === "active" ? active : history;
+
+  const displayList = searchQuery.trim()
+    ? baseList.filter((d) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          d.customerName.toLowerCase().includes(q) ||
+          (d.customerPhone ?? "").includes(q) ||
+          d.deliveryAddress.toLowerCase().includes(q) ||
+          d.pickupAddress.toLowerCase().includes(q) ||
+          d.orderNumber.toLowerCase().includes(q)
+        );
+      })
+    : baseList;
+
   const groups = groupByCustomer(displayList);
 
   const tabs = [
@@ -383,19 +398,43 @@ export function DeliveryPanel({
         </div>
       </div>
 
+      {/* Search */}
+      <div className="px-3 py-2 bg-white border-b border-gray-100">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Chercher par nom, téléphone, adresse..."
+            className="w-full text-sm bg-gray-50 border border-gray-200 rounded-xl pl-8 pr-8 py-2 focus:outline-none focus:ring-1 focus:ring-gray-300 placeholder:text-gray-400"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* List */}
       <div className="flex-1 overflow-y-auto pt-3 pb-20">
         {groups.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-6">
             <span className="text-5xl mb-3">
-              {activeTab === "pending" ? "⏳" : activeTab === "active" ? "🏍️" : "✅"}
+              {searchQuery ? "🔍" : activeTab === "pending" ? "⏳" : activeTab === "active" ? "🏍️" : "✅"}
             </span>
             <p className="text-gray-500 font-medium">
-              {activeTab === "pending" ? "Aucune course en attente"
-               : activeTab === "active" ? "Aucune course en cours"
-               : "Aucun historique"}
+              {searchQuery
+                ? "Aucun résultat pour cette recherche"
+                : activeTab === "pending" ? "Aucune course en attente"
+                : activeTab === "active" ? "Aucune course en cours"
+                : "Aucun historique"}
             </p>
-            {activeTab === "pending" && (
+            {activeTab === "pending" && !searchQuery && (
               <button
                 onClick={onAdd}
                 className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-colors"
