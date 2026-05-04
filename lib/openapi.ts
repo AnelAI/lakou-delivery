@@ -427,7 +427,11 @@ export const openApiSpec = {
         description:
           "Validates `password` against the `ADMIN_PASSWORD` env var and " +
           "returns an HMAC-signed session cookie (`lakou_admin_session`, " +
-          "7-day lifetime, `HttpOnly`, `SameSite=Lax`).",
+          "7-day lifetime, `HttpOnly`, `SameSite=Lax`).\n\n" +
+          "**Tip — Swagger UI**: in the request body editor, replace the " +
+          "default placeholder with your real password before clicking " +
+          "*Execute*. The field is intentionally **not** `format: password` " +
+          "so Swagger UI does not mask or auto-fill it.",
         security: [],
         requestBody: {
           required: true,
@@ -436,7 +440,14 @@ export const openApiSpec = {
               schema: {
                 type: "object",
                 required: ["password"],
-                properties: { password: { type: "string", format: "password" } },
+                properties: {
+                  password: {
+                    type: "string",
+                    description: "Admin password (matches the `ADMIN_PASSWORD` server env var).",
+                    example: "your-admin-password",
+                  },
+                },
+                example: { password: "your-admin-password" },
               },
             },
           },
