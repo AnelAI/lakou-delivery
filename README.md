@@ -20,6 +20,39 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## API Reference (Swagger / OpenAPI 3.0)
+
+The platform exposes a fully documented REST API. The OpenAPI 3.0 source of
+truth lives in [`lib/openapi.ts`](lib/openapi.ts) and is served and rendered
+at runtime — there is **no build step** and no extra dependency to install.
+
+| URL              | Description                                     |
+| ---------------- | ----------------------------------------------- |
+| `/api-docs`      | Interactive Swagger UI (try-it-out enabled).    |
+| `/api/docs`      | Raw OpenAPI 3.0 JSON (suitable for Postman, codegen, contract tests…). |
+
+### Authentication in Swagger UI
+
+Admin endpoints are protected by the `lakou_admin_session` cookie. To
+exercise them from Swagger UI:
+
+1. Open `/api-docs`.
+2. Expand **Auth › `POST /api/auth/login`** and *Try it out* with your
+   admin password — the response sets the session cookie.
+3. Every subsequent *Try it out* call automatically forwards the cookie
+   (`withCredentials: true` is set on the Swagger UI client).
+
+Public endpoints (`POST /api/auth/login`, `GET /api/track/{orderNumber}`,
+`GET /api/docs`) do not require authentication and are flagged with an
+empty `security: []` array in the spec.
+
+### Editing the spec
+
+All endpoint metadata, request/response schemas, parameters, examples and
+tag descriptions are centralised in `lib/openapi.ts`. Edit that single
+module and refresh `/api-docs` — Swagger UI re-fetches the spec on each
+load.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
