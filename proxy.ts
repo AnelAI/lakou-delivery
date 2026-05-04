@@ -3,6 +3,8 @@ import { verifySessionToken, SESSION_COOKIE } from "@/lib/auth";
 
 const PUBLIC_PREFIXES = [
   "/login",
+  "/api-docs",
+  "/api/docs",
   "/api/auth",
   "/api/couriers/",
   "/api/deliveries",
