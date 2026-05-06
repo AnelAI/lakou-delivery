@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/db";
 import { pusher, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher";
 
+function generateAccessKey(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let key = "LKD-";
+  for (let i = 0; i < 6; i++) key += chars[Math.floor(Math.random() * chars.length)];
+  return key;
+}
+
 export async function GET() {
   try {
     const todayStart = new Date();
@@ -60,8 +67,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Name and phone are required" }, { status: 400 });
     }
 
-    const courier = await prisma.courier.create({
-      data: { name, phone, photo: photo || null },
+    // Generate a unique access key, retrying on collision (extremely rare)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = prisma as any;
+    let accessKey = generateAccessKey();
+    for (let i = 0; i < 5; i++) {
+      const existing = await db.courier.findFirst({ where: { accessKey } });
+      if (!existing) break;
+      accessKey = generateAccessKey();
+    }
+
+    const courier = await db.courier.create({
+      data: { name, phone, photo: photo || null, accessKey },
     });
 
     pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIERS_UPDATED, {}).catch(console.error);

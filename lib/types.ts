@@ -22,6 +22,7 @@ export interface Courier {
   name: string;
   phone: string;
   photo?: string | null;
+  accessKey?: string | null;
   status: CourierStatus;
   currentLat?: number | null;
   currentLng?: number | null;

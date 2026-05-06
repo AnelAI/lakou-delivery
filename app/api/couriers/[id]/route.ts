@@ -41,9 +41,16 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
+    // Transform isOnline boolean → status string used by the schema
+    const { isOnline, ...rest } = body;
+    const data: Record<string, unknown> = { ...rest };
+    if (isOnline !== undefined) {
+      data.status = isOnline ? "online" : "offline";
+    }
+
     const courier = await prisma.courier.update({
       where: { id },
-      data: body,
+      data,
     });
 
     pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIERS_UPDATED, {}).catch(console.error);

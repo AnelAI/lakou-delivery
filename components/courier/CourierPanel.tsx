@@ -9,7 +9,7 @@ import Link from "next/link";
 import {
   Phone, MapPin, Package, ChevronRight,
   Wifi, WifiOff, AlertTriangle, Bike, LayoutDashboard,
-  Eye, EyeOff, Truck,
+  Eye, EyeOff, Truck, Copy, Check,
 } from "lucide-react";
 
 interface Props {
@@ -31,6 +31,13 @@ export function CourierPanel({
   courierColors, visibleIds, onToggleVisible, onShowAll, onHideAll,
 }: Props) {
   const [search, setSearch] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyKey = async (courierId: string, key: string) => {
+    await navigator.clipboard.writeText(key);
+    setCopiedId(courierId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const filtered = couriers.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
@@ -211,6 +218,21 @@ export function CourierPanel({
                             <Phone size={9} />
                             {courier.phone}
                           </div>
+                        )}
+                        {courier.accessKey && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); copyKey(courier.id, courier.accessKey!); }}
+                            className="flex items-center gap-1 mt-0.5 text-xs font-mono font-semibold px-1.5 py-0.5 rounded transition-colors"
+                            title="Copier la clé d'accès"
+                            style={{
+                              background: copiedId === courier.id ? "#dcfce7" : "#f0f0f0",
+                              color: copiedId === courier.id ? "#16a34a" : "#555",
+                              border: `1px solid ${copiedId === courier.id ? "#bbf7d0" : "#ddd"}`,
+                            }}
+                          >
+                            {copiedId === courier.id ? <Check size={9} /> : <Copy size={9} />}
+                            {courier.accessKey}
+                          </button>
                         )}
                       </div>
                     </div>

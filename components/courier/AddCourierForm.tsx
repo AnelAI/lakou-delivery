@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { Copy, Check } from "lucide-react";
 
 interface Props {
   isOpen: boolean;
@@ -13,6 +14,8 @@ export function AddCourierForm({ isOpen, onClose, onSuccess }: Props) {
   const [form, setForm] = useState({ name: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +32,9 @@ export function AddCourierForm({ isOpen, onClose, onSuccess }: Props) {
         setError(data.error || "Erreur lors de la création");
         return;
       }
-      setForm({ name: "", phone: "" });
+      const data = await res.json();
+      setCreatedKey(data.accessKey ?? null);
       onSuccess();
-      onClose();
     } catch {
       setError("Erreur réseau");
     } finally {
@@ -39,8 +42,57 @@ export function AddCourierForm({ isOpen, onClose, onSuccess }: Props) {
     }
   };
 
+  const copyKey = async () => {
+    if (!createdKey) return;
+    await navigator.clipboard.writeText(createdKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleClose = () => {
+    setForm({ name: "", phone: "" });
+    setCreatedKey(null);
+    setCopied(false);
+    setError("");
+    onClose();
+  };
+
+  if (createdKey) {
+    return (
+      <Modal isOpen={isOpen} onClose={handleClose} title="Coursier créé !">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Donnez cette clé au coursier pour qu&apos;il puisse se connecter sur l&apos;application mobile.
+          </p>
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+            <span className="flex-1 font-mono text-xl font-bold tracking-widest text-gray-900">
+              {createdKey}
+            </span>
+            <button
+              onClick={copyKey}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+              style={{ background: copied ? "#16a34a" : "#111827", color: "#fff" }}
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? "Copié !" : "Copier"}
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 text-center">
+            Cette clé est unique et liée au compte de ce coursier.
+          </p>
+          <button
+            onClick={handleClose}
+            className="w-full bg-red-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700"
+          >
+            Fermer
+          </button>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Ajouter un coursier">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Ajouter un coursier">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -74,7 +126,7 @@ export function AddCourierForm({ isOpen, onClose, onSuccess }: Props) {
         <div className="flex gap-3 pt-2">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="flex-1 border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50"
           >
             Annuler

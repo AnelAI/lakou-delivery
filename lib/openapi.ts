@@ -291,6 +291,19 @@ export const openApiSpec = {
         },
       },
 
+      // ── Courier login ─────────────────────────────────────────────────────
+      CourierLoginResponse: {
+        type: "object",
+        required: ["id", "name", "phone", "status"],
+        properties: {
+          id:     { type: "string", format: "uuid" },
+          name:   { type: "string", example: "Karim Ben Ali" },
+          phone:  { type: "string", example: "+216 22 333 444" },
+          photo:  { type: "string", nullable: true, example: "https://…/photo.jpg" },
+          status: { type: "string", enum: ["offline", "available", "busy"] },
+        },
+      },
+
       // ── Alert ────────────────────────────────────────────────────────────
       Alert: {
         type: "object",
@@ -476,6 +489,47 @@ export const openApiSpec = {
         responses: {
           "200": { description: "Cookie cleared.",
             content: { "application/json": { schema: { $ref: "#/components/schemas/OkResponse" } } } },
+        },
+      },
+    },
+    "/api/auth/courier-login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Courier access-key login",
+        description:
+          "Authenticates a courier by their personal `accessKey` (case-insensitive, " +
+          "whitespace is trimmed). Returns a lightweight courier profile.\n\n" +
+          "No session cookie is issued — the mobile app uses the returned `id` " +
+          "to identify subsequent GPS pings sent to `POST /api/tracking`.",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["key"],
+                properties: {
+                  key: {
+                    type: "string",
+                    description: "Courier access key (case-insensitive, whitespace trimmed before lookup).",
+                    example: "KARIM-2024",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Authentication successful — returns the courier profile.",
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/CourierLoginResponse" } },
+            },
+          },
+          "400": { $ref: "#/components/responses/BadRequest" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "500": { $ref: "#/components/responses/ServerError" },
         },
       },
     },

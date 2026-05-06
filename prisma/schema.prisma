@@ -13,6 +13,7 @@ model Courier {
   name        String
   phone       String
   photo       String?
+  accessKey   String?  @unique
   status      String   @default("offline")
   currentLat  Float?
   currentLng  Float?
