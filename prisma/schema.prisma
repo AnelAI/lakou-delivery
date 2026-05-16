@@ -14,6 +14,7 @@ model Courier {
   phone       String
   photo       String?
   accessKey   String?  @unique
+  fcmToken    String?
   status      String   @default("offline")
   currentLat  Float?
   currentLng  Float?
@@ -92,4 +93,12 @@ model Alert {
   resolved   Boolean  @default(false)
   resolvedAt DateTime?
   createdAt  DateTime @default(now())
+}
+
+model AdminPushSubscription {
+  id        String   @id @default(uuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }

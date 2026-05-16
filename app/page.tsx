@@ -12,6 +12,7 @@ import { AddCourierForm } from "@/components/courier/AddCourierForm";
 import { AddDeliveryForm } from "@/components/delivery/AddDeliveryForm";
 import { CourierDeliveriesModal } from "@/components/courier/CourierDeliveriesModal";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
+import { useWebPush } from "@/lib/useWebPush";
 import {
   Bell, RefreshCw, Users, Package, Map as MapIcon, LayoutDashboard, Store, LogOut,
 } from "lucide-react";
@@ -35,6 +36,7 @@ type MobileTab = "map" | "couriers" | "deliveries";
 
 export default function Dashboard() {
   const router = useRouter();
+  useWebPush();
   const [couriers, setCouriers] = useState<Courier[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);

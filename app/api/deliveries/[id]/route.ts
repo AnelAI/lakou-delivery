@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/db";
 import { haversineDistance, estimateTravelTime } from "@/lib/geo";
 import { pusher, ADMIN_CHANNEL, courierChannel, orderChannel, EVENTS } from "@/lib/pusher";
+import { notifyAdmin } from "@/lib/web-push";
+import { sendCourierFcm } from "@/lib/firebase-admin";
 
 export async function GET(
   req: NextRequest,
@@ -84,6 +86,20 @@ export async function PATCH(
           delivery: { ...updateData, id },
           message: `Nouvelle course : ${delivery.pickupAddress} → ${delivery.deliveryAddress}`,
         }).catch(console.error);
+
+        if (courier.fcmToken) {
+          sendCourierFcm(courier.fcmToken, {
+            title: "Nouvelle course assignée",
+            body: `${delivery.pickupAddress} → ${delivery.deliveryAddress}`,
+            data: {
+              type: "new_order",
+              deliveryId: id,
+              orderNumber: delivery.orderNumber,
+              pickupAddress: delivery.pickupAddress,
+              deliveryAddress: delivery.deliveryAddress,
+            },
+          }).catch(console.error);
+        }
       }
     } else if (action === "unassign") {
       const delivery = await prisma.delivery.findUnique({ where: { id } });
@@ -107,6 +123,7 @@ export async function PATCH(
       updateData = { ...updateData, status: "picked_up", pickedUpAt: new Date() };
     } else if (action === "deliver") {
       updateData = { ...updateData, status: "delivered", deliveredAt: new Date() };
+      // courier status handled below (existing logic)
 
       const currentDelivery = await prisma.delivery.findUnique({ where: { id } });
       if (currentDelivery?.courierId) {
@@ -172,6 +189,12 @@ export async function PATCH(
           orderNumber: current.orderNumber,
           customerName: current.customerName,
         }).catch(console.error);
+        notifyAdmin({
+          title: "Course acceptée",
+          body: `${current.courier.name} a accepté la course #${current.orderNumber} — ${current.customerName}`,
+          tag: `ack-${id}`,
+          url: "/",
+        }).catch(console.error);
       }
       return NextResponse.json({ ok: true });
     }
@@ -185,6 +208,24 @@ export async function PATCH(
     pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_UPDATED, delivery).catch(console.error);
     // Notify customer tracking page
     pusher.trigger(orderChannel(delivery.orderNumber), EVENTS.DELIVERY_STATUS_UPDATE, delivery).catch(console.error);
+
+    // Web push to admin for courier status changes
+    if (action === "pickup" && delivery.courier) {
+      notifyAdmin({
+        title: "Colis récupéré",
+        body: `${delivery.courier.name} a récupéré le colis #${delivery.orderNumber}`,
+        tag: `pickup-${id}`,
+        url: "/",
+      }).catch(console.error);
+    } else if (action === "deliver" && delivery.courier) {
+      notifyAdmin({
+        title: "Course livrée",
+        body: `${delivery.courier.name} a livré la commande #${delivery.orderNumber} à ${delivery.customerName}`,
+        tag: `deliver-${id}`,
+        url: "/",
+        requireInteraction: true,
+      }).catch(console.error);
+    }
 
     return NextResponse.json(delivery);
   } catch (error) {
