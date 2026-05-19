@@ -219,7 +219,7 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
     if (coords.length > 0) {
       const bounds = new G.maps.LatLngBounds();
       coords.forEach(p => bounds.extend(p));
-      map.fitBounds(bounds, { padding: 60 });
+      map.fitBounds(bounds, 60);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stops.map(s => `${s.lat},${s.lng}`).join("|"), deliveryLat, deliveryLng]);
