@@ -257,10 +257,10 @@ export default function AlertsPage() {
         {/* Tabs */}
         <div className="flex gap-2 mb-5">
           {([
-            { key: "all",    label: "Tout",          count: totalUnread },
+            { key: "all",    label: "Tout",          count: totalUnread,   icon: undefined },
             { key: "alerts", label: "Alertes GPS",   count: activeAlerts,  icon: <AlertTriangle size={12} /> },
             { key: "notifs", label: "Livraisons",    count: unreadNotifs,  icon: <Bike size={12} /> },
-          ] as const).map(({ key, label, count, icon }) => (
+          ] as { key: "all" | "alerts" | "notifs"; label: string; count: number; icon: React.ReactNode }[]).map(({ key, label, count, icon }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
