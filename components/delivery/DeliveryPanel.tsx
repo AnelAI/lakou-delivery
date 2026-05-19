@@ -9,6 +9,7 @@ import {
   ChevronRight, ChevronDown, Phone, DollarSign, Search, X,
 } from "lucide-react";
 import { DeliveryDetailModal } from "./DeliveryDetailModal";
+import { EditDeliveryForm } from "./EditDeliveryForm";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", patisserie: "🧁", boucherie: "🥩",
@@ -325,6 +326,7 @@ export function DeliveryPanel({
 }: Props) {
   const [activeTab, setActiveTab]           = useState<"pending" | "active" | "history">("pending");
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
+  const [editingDelivery, setEditingDelivery]   = useState<Delivery | null>(null);
   const [searchQuery, setSearchQuery]       = useState("");
 
   const pending = deliveries.filter((d) => d.status === "pending");
@@ -466,15 +468,27 @@ export function DeliveryPanel({
       </button>
 
       {/* Detail modal */}
-      {selectedDelivery && (
+      {selectedDelivery && !editingDelivery && (
         <DeliveryDetailModal
           delivery={selectedDelivery}
           couriers={couriers}
           onClose={() => setSelectedDelivery(null)}
+          onEdit={() => { setEditingDelivery(selectedDelivery); setSelectedDelivery(null); }}
           onAssign={(id, courierId) => { onAssign(id, courierId); setSelectedDelivery(null); }}
           onStatusChange={(id, action) => { onStatusChange(id, action); setSelectedDelivery(null); }}
           onConfirmLocation={onConfirmLocation}
           onConfirmPickup={onConfirmPickup}
+        />
+      )}
+
+      {/* Full-screen edit form */}
+      {editingDelivery && (
+        <EditDeliveryForm
+          delivery={editingDelivery}
+          couriers={couriers}
+          onClose={() => setEditingDelivery(null)}
+          onStatusChange={(id, action) => { onStatusChange(id, action); setEditingDelivery(null); }}
+          onSaved={() => setEditingDelivery(null)}
         />
       )}
     </div>

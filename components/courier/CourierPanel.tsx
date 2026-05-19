@@ -144,9 +144,12 @@ export function CourierPanel({
                   </button>
 
                   {/* Main row — click centers map */}
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onSelect(courier)}
-                    className="flex-1 min-w-0 text-left p-2.5 overflow-hidden"
+                    onKeyDown={(e) => e.key === "Enter" && onSelect(courier)}
+                    className="flex-1 min-w-0 text-left p-2.5 overflow-hidden cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
                       <div className="relative flex-shrink-0">
@@ -236,7 +239,7 @@ export function CourierPanel({
                         )}
                       </div>
                     </div>
-                  </button>
+                  </div>
 
                   {/* View deliveries button — always visible, fixed width */}
                   <button

@@ -14,9 +14,10 @@ import { CourierDeliveriesModal } from "@/components/courier/CourierDeliveriesMo
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import { useWebPush } from "@/lib/useWebPush";
 import {
-  Bell, RefreshCw, Users, Package, Map as MapIcon, LayoutDashboard, Store, LogOut,
+  RefreshCw, Users, Package, Map as MapIcon, LayoutDashboard, Store, LogOut,
 } from "lucide-react";
 import Link from "next/link";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useRouter } from "next/navigation";
 import { LakouLogo } from "@/components/ui/LakouLogo";
 
@@ -215,19 +216,7 @@ export default function Dashboard() {
           >
             <RefreshCw size={15} />
           </button>
-          <Link
-            href="/alerts"
-            className="relative p-2 rounded-lg transition-colors"
-            style={{ color: activeAlerts.length > 0 ? "#FF3B2F" : "#5A5A5A", background: activeAlerts.length > 0 ? "rgba(255,59,47,0.08)" : "transparent" }}
-            title="Alertes"
-          >
-            <Bell size={15} />
-            {activeAlerts.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 text-white text-xs rounded-full flex items-center justify-center leading-none" style={{ background: "#FF3B2F", border: "2px solid white" }}>
-                {activeAlerts.length > 9 ? "9+" : activeAlerts.length}
-              </span>
-            )}
-          </Link>
+          <NotificationBell activeAlerts={activeAlerts.length} />
 
           {/* ── Courses button — toujours visible sur mobile ── */}
           <button

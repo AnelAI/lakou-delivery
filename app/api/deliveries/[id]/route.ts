@@ -87,6 +87,7 @@ export async function PATCH(
           message: `Nouvelle course : ${delivery.pickupAddress} → ${delivery.deliveryAddress}`,
         }).catch(console.error);
 
+        console.log("[ASSIGN] courier.fcmToken:", courier.fcmToken ?? "null — token not registered");
         if (courier.fcmToken) {
           sendCourierFcm(courier.fcmToken, {
             title: "Nouvelle course assignée",
@@ -98,7 +99,9 @@ export async function PATCH(
               pickupAddress: delivery.pickupAddress,
               deliveryAddress: delivery.deliveryAddress,
             },
-          }).catch(console.error);
+          }).catch((err) => console.error("[ASSIGN] FCM send error:", err));
+        } else {
+          console.warn("[ASSIGN] No fcmToken on courier — notification not sent");
         }
       }
     } else if (action === "unassign") {
@@ -178,6 +181,8 @@ export async function PATCH(
       updateData = { priority: parseInt(body.priority ?? "0") };
     } else if (action === "update-notes") {
       updateData = { notes: body.notes ?? null };
+    } else if (action === "update-description") {
+      updateData = { deliveryDescription: body.deliveryDescription ?? null };
     } else if (action === "acknowledge") {
       const current = await prisma.delivery.findUnique({
         where: { id },

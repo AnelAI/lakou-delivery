@@ -18,7 +18,7 @@ export function useWebPush() {
     if (!vapidKey) return;
 
     async function setup() {
-      const reg = await navigator.serviceWorker.register("/sw.js");
+      const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
       await navigator.serviceWorker.ready;
 
       const permission = await Notification.requestPermission();

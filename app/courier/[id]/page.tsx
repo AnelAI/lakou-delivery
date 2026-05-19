@@ -549,7 +549,7 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                           {delivery.deliveryAddress}
                         </div>
                         {delivery.deliveryDescription && (
-                          <div style={{ fontSize: 13, color: C.amber, fontWeight: 500, lineHeight: 1.4, marginBottom: 8, padding: "8px 10px", background: "rgba(255,255,255,0.6)", borderRadius: 8 }}>
+                          <div style={{ fontSize: 13, color: C.amber, fontWeight: 500, lineHeight: 1.4, marginBottom: 8, padding: "8px 10px", background: "rgba(255,255,255,0.6)", borderRadius: 8, whiteSpace: "pre-wrap" }}>
                             📍 {delivery.deliveryDescription}
                           </div>
                         )}

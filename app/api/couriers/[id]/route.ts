@@ -45,7 +45,7 @@ export async function PATCH(
     const { isOnline, ...rest } = body;
     const data: Record<string, unknown> = { ...rest };
     if (isOnline !== undefined) {
-      data.status = isOnline ? "online" : "offline";
+      data.status = isOnline ? "available" : "offline";
     }
 
     const courier = await prisma.courier.update({
