@@ -122,6 +122,7 @@ export function EditDeliveryForm({
       const map = new window.google.maps.Map(mapPanelRef.current, {
         center, zoom: 14,
         mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+        mapTypeId: "satellite",
         styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }],
       });
       gMapRef.current = map;

@@ -38,6 +38,7 @@ export function MapPickerModal({ title, subtitle, initialCenter, onConfirm, onCl
         streetViewControl: false,
         mapTypeControl: false,
         fullscreenControl: false,
+        mapTypeId: "satellite",
       });
 
       map.addListener("click", (e: google.maps.MapMouseEvent) => {

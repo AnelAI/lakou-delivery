@@ -190,6 +190,7 @@ export function CourierLiveMap({ position, deliveries, targetDeliveryId, showRou
         zoom={16}
         onLoad={onMapLoad}
         options={{
+          mapTypeId: "satellite",
           zoomControl: true,
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
