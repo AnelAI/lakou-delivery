@@ -37,9 +37,13 @@ export async function sendCourierFcm(
   const app = getApp();
   const message = {
     token,
-    notification: { title: payload.title, body: payload.body },
-    data: payload.data ?? {},
-    android: { priority: "high" as const, notification: { sound: "default" } },
+    // Data-only: no notification field so _backgroundMessageHandler always fires
+    data: {
+      title: payload.title,
+      body: payload.body,
+      ...(payload.data ?? {}),
+    },
+    android: { priority: "high" as const },
   };
 
   try {

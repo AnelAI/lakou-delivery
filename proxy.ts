@@ -12,6 +12,8 @@ const PUBLIC_PREFIXES = [
   "/api/tracking",
   "/api/track",
   "/api/stats",
+  "/api/fcm-check",
+  "/api/push",
   "/order",
   "/track",
   "/courier",

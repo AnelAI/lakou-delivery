@@ -47,7 +47,7 @@ export async function PATCH(
           const prevRemaining = await prisma.delivery.count({
             where: {
               courierId: delivery.courierId,
-              status: { in: ["assigned", "picked_up"] },
+              status: { in: ["assigned", "confirmed", "picked_up"] },
               id: { not: id },
             },
           });
@@ -98,6 +98,16 @@ export async function PATCH(
               orderNumber: delivery.orderNumber,
               pickupAddress: delivery.pickupAddress,
               deliveryAddress: delivery.deliveryAddress,
+              customerName: delivery.customerName,
+              customerPhone: delivery.customerPhone ?? "",
+              pickupLat: String(delivery.pickupLat),
+              pickupLng: String(delivery.pickupLng),
+              pickupMapsUrl: delivery.pickupMapsUrl ?? "",
+              deliveryLat: String(delivery.deliveryLat),
+              deliveryLng: String(delivery.deliveryLng),
+              deliveryMapsUrl: delivery.deliveryMapsUrl ?? "",
+              price: delivery.price != null ? String(delivery.price) : "0",
+              notes: delivery.notes ?? "",
             },
           }).catch((err) => console.error("[ASSIGN] FCM send error:", err));
         } else {
@@ -105,12 +115,15 @@ export async function PATCH(
         }
       }
     } else if (action === "unassign") {
-      const delivery = await prisma.delivery.findUnique({ where: { id } });
+      const delivery = await prisma.delivery.findUnique({
+        where: { id },
+        include: { courier: true },
+      });
       if (delivery?.courierId) {
         const remaining = await prisma.delivery.count({
           where: {
             courierId: delivery.courierId,
-            status: { in: ["assigned", "picked_up"] },
+            status: { in: ["assigned", "confirmed", "picked_up"] },
             id: { not: id },
           },
         });
@@ -120,20 +133,26 @@ export async function PATCH(
             data: { status: "available" },
           });
         }
+        if (delivery.courier?.fcmToken) {
+          sendCourierFcm(delivery.courier.fcmToken, {
+            title: "Course désassignée",
+            body: `La course #${delivery.orderNumber} vous a été retirée`,
+            data: { type: "cancelled", deliveryId: id, orderNumber: delivery.orderNumber },
+          }).catch(console.error);
+        }
       }
       updateData = { ...updateData, status: "pending", courierId: null };
     } else if (action === "pickup") {
       updateData = { ...updateData, status: "picked_up", pickedUpAt: new Date() };
     } else if (action === "deliver") {
       updateData = { ...updateData, status: "delivered", deliveredAt: new Date() };
-      // courier status handled below (existing logic)
 
       const currentDelivery = await prisma.delivery.findUnique({ where: { id } });
       if (currentDelivery?.courierId) {
         const remaining = await prisma.delivery.count({
           where: {
             courierId: currentDelivery.courierId,
-            status: { in: ["assigned", "picked_up"] },
+            status: { in: ["assigned", "confirmed", "picked_up"] },
             id: { not: id },
           },
         });
@@ -145,12 +164,15 @@ export async function PATCH(
         }
       }
     } else if (action === "cancel") {
-      const currentDelivery = await prisma.delivery.findUnique({ where: { id } });
+      const currentDelivery = await prisma.delivery.findUnique({
+        where: { id },
+        include: { courier: true },
+      });
       if (currentDelivery?.courierId) {
         const remaining = await prisma.delivery.count({
           where: {
             courierId: currentDelivery.courierId,
-            status: { in: ["assigned", "picked_up"] },
+            status: { in: ["assigned", "confirmed", "picked_up"] },
             id: { not: id },
           },
         });
@@ -159,6 +181,13 @@ export async function PATCH(
             where: { id: currentDelivery.courierId },
             data: { status: "available" },
           });
+        }
+        if (currentDelivery.courier?.fcmToken) {
+          sendCourierFcm(currentDelivery.courier.fcmToken, {
+            title: "Course annulée",
+            body: `La course #${currentDelivery.orderNumber} a été annulée par l'admin`,
+            data: { type: "cancelled", deliveryId: id, orderNumber: currentDelivery.orderNumber },
+          }).catch(console.error);
         }
       }
       updateData = { ...updateData, status: "cancelled", courierId: null };
@@ -201,7 +230,7 @@ export async function PATCH(
           url: "/",
         }).catch(console.error);
       }
-      return NextResponse.json({ ok: true });
+      updateData = { status: "confirmed" };
     }
 
     const delivery = await prisma.delivery.update({

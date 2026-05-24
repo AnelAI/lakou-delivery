@@ -54,18 +54,21 @@ export function EditDeliveryForm({
   const [customerName,  setCustomerName]  = useState(delivery.customerName);
   const [customerPhone, setCustomerPhone] = useState(delivery.customerPhone ?? "");
 
-  const [pickupMapMethod, setPickupMapMethod] = useState<MapMethod>("search");
-  const [pickupLinkInput, setPickupLinkInput] = useState("");
+  const [pickupMapMethod, setPickupMapMethod] = useState<MapMethod>(delivery.pickupMapsUrl ? "link" : "search");
+  const [pickupLinkInput, setPickupLinkInput] = useState(delivery.pickupMapsUrl ?? "");
   const [pickupAddress, setPickupAddress] = useState(delivery.pickupAddress);
   const [pickupLat,     setPickupLat]     = useState(delivery.pickupLat !== 0 ? delivery.pickupLat.toString() : "");
   const [pickupLng,     setPickupLng]     = useState(delivery.pickupLng !== 0 ? delivery.pickupLng.toString() : "");
   const [pickupPinned,  setPickupPinned]  = useState(delivery.pickupLat !== 0 && delivery.pickupLng !== 0);
 
-  const initMethod = (): MapMethod =>
-    delivery.locationConfirmed === false && !delivery.deliveryLat ? "description" : "search";
+  const initDeliveryMethod = (): MapMethod => {
+    if (delivery.deliveryMapsUrl) return "link";
+    if (delivery.locationConfirmed === false && !delivery.deliveryLat) return "description";
+    return "search";
+  };
 
-  const [deliveryMapMethod, setDeliveryMapMethod] = useState<MapMethod>(initMethod);
-  const [deliveryLinkInput, setDeliveryLinkInput] = useState("");
+  const [deliveryMapMethod, setDeliveryMapMethod] = useState<MapMethod>(initDeliveryMethod);
+  const [deliveryLinkInput, setDeliveryLinkInput] = useState(delivery.deliveryMapsUrl ?? "");
   const [deliveryAddress,   setDeliveryAddress]   = useState(delivery.deliveryAddress);
   const [deliveryLat,       setDeliveryLat]       = useState(
     delivery.deliveryLat ? delivery.deliveryLat.toString() : ""
@@ -217,27 +220,18 @@ export function EditDeliveryForm({
     </div>
   );
 
-  const LinkInput = ({ value, onChange, onParsed }: {
-    value: string; onChange: (v: string) => void; onParsed: (lat: number, lng: number) => void;
-  }) => {
-    const parsed = value ? parseGMapsLink(value) : null;
-    return (
-      <div className="space-y-1.5">
-        <div className="relative">
-          <Link2 size={12} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
-          <input
-            type="url" value={value}
-            onChange={e => { onChange(e.target.value); const c = parseGMapsLink(e.target.value); if (c) onParsed(c.lat, c.lng); }}
-            placeholder="Coller un lien Google Maps…"
-            className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            style={{ border: `1px solid ${parsed ? "#6EE7B7" : "#E5E7EB"}`, background: parsed ? "#F0FDF4" : "#FAFAFA" }}
-          />
-        </div>
-        {value && !parsed && <p className="text-xs pl-1" style={{ color: "#F97316" }}>Lien non reconnu — essayez de copier depuis Google Maps → Partager → Copier le lien</p>}
-        {parsed && <div className="flex items-center gap-1.5 text-xs px-2" style={{ color: "#059669" }}><ExternalLink size={10} /> {parsed.lat.toFixed(5)}, {parsed.lng.toFixed(5)}</div>}
-      </div>
-    );
-  };
+  const LinkInput = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    <div className="relative">
+      <Link2 size={12} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
+      <input
+        type="text" value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Coller un lien Google Maps…"
+        className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        style={{ border: `1px solid ${value ? "#6EE7B7" : "#E5E7EB"}`, background: value ? "#F0FDF4" : "#FAFAFA" }}
+      />
+    </div>
+  );
 
   const MethodSelector = ({ method, setMethod, activeColor, clickTarget }: {
     method: MapMethod; setMethod: (m: MapMethod) => void;
@@ -284,13 +278,15 @@ export function EditDeliveryForm({
         body: JSON.stringify({
           customerName:        customerName.trim(),
           customerPhone:       customerPhone.trim() || null,
-          pickupAddress:       pickupAddress.trim(),
-          pickupLat:           parseFloat(pickupLat) || delivery.pickupLat,
-          pickupLng:           parseFloat(pickupLng) || delivery.pickupLng,
-          deliveryAddress:     deliveryAddress.trim(),
-          deliveryLat:         deliveryMapMethod === "description" ? 0 : parseFloat(deliveryLat),
-          deliveryLng:         deliveryMapMethod === "description" ? 0 : parseFloat(deliveryLng),
-          locationConfirmed:   deliveryMapMethod !== "description",
+          pickupAddress:       pickupMapMethod === "link" ? (pickupAddress.trim() || "Lien Google Maps") : pickupAddress.trim(),
+          pickupLat:           pickupMapMethod === "link" ? 0 : (parseFloat(pickupLat) || delivery.pickupLat),
+          pickupLng:           pickupMapMethod === "link" ? 0 : (parseFloat(pickupLng) || delivery.pickupLng),
+          pickupMapsUrl:       pickupMapMethod === "link" && pickupLinkInput.trim() ? pickupLinkInput.trim() : null,
+          deliveryAddress:     deliveryMapMethod === "link" ? (deliveryAddress.trim() || "Lien Google Maps") : deliveryAddress.trim(),
+          deliveryLat:         (deliveryMapMethod === "description" || deliveryMapMethod === "link") ? 0 : parseFloat(deliveryLat),
+          deliveryLng:         (deliveryMapMethod === "description" || deliveryMapMethod === "link") ? 0 : parseFloat(deliveryLng),
+          deliveryMapsUrl:     deliveryMapMethod === "link" && deliveryLinkInput.trim() ? deliveryLinkInput.trim() : null,
+          locationConfirmed:   deliveryMapMethod !== "description" && deliveryMapMethod !== "link",
           notes:               notes.trim() || null,
           deliveryDescription: instructions.trim() || null,
           price:               price ? parseFloat(price) : null,
@@ -467,9 +463,7 @@ export function EditDeliveryForm({
                       />
                     )}
                     {pickupMapMethod === "link" && (
-                      <LinkInput value={pickupLinkInput} onChange={setPickupLinkInput}
-                        onParsed={(lat, lng) => { setPickupLat(lat.toString()); setPickupLng(lng.toString()); setPickupPinned(true); }}
-                      />
+                      <LinkInput value={pickupLinkInput} onChange={setPickupLinkInput} />
                     )}
                     {pickupMapMethod === "click" && (
                       <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
@@ -553,11 +547,7 @@ export function EditDeliveryForm({
                     )}
 
                     {deliveryMapMethod === "link" && (
-                      <LinkInput
-                        value={deliveryLinkInput}
-                        onChange={setDeliveryLinkInput}
-                        onParsed={(lat, lng) => { setDeliveryLat(lat.toString()); setDeliveryLng(lng.toString()); setDeliveryPinned(true); }}
-                      />
+                      <LinkInput value={deliveryLinkInput} onChange={setDeliveryLinkInput} />
                     )}
 
                     {deliveryMapMethod === "click" && (

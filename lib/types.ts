@@ -44,9 +44,11 @@ export interface Delivery {
   pickupAddress: string;
   pickupLat: number;
   pickupLng: number;
+  pickupMapsUrl?: string | null;
   deliveryAddress: string;
   deliveryLat: number;
   deliveryLng: number;
+  deliveryMapsUrl?: string | null;
   notes?: string | null;
   deliveryDescription?: string | null;
   locationConfirmed: boolean;

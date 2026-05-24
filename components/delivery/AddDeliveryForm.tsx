@@ -265,12 +265,16 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
         if (!stop.lat || !stop.lng) { setError("Localisez chaque marchand (GPS requis)"); return; }
       } else if (stop.mapMethod === "description") {
         if (!stop.address.trim()) { setError("Décrivez l'emplacement de chaque arrêt"); return; }
+      } else if (stop.mapMethod === "link") {
+        if (!stop.linkInput.trim()) { setError("Collez un lien pour chaque arrêt"); return; }
       } else {
         if (!stop.lat || !stop.lng) { setError("Localisez chaque arrêt sur la carte"); return; }
       }
     }
     if (deliveryMapMethod === "description") {
       if (!deliveryAddress.trim()) { setError("Décrivez l'emplacement de livraison"); return; }
+    } else if (deliveryMapMethod === "link") {
+      if (!deliveryLinkInput.trim()) { setError("Collez un lien pour la livraison"); return; }
     } else {
       if (!deliveryLat || !deliveryLng) { setError("Localisez le client sur la carte"); return; }
     }
@@ -282,21 +286,25 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             customerName, customerPhone,
-            pickupAddress: stop.address || stop.merchantName || `${parseFloat(stop.lat).toFixed(5)}, ${parseFloat(stop.lng).toFixed(5)}`,
-            pickupLat: stop.mapMethod === "description" ? BIZERTE_CENTER.lat : parseFloat(stop.lat),
-            pickupLng: stop.mapMethod === "description" ? BIZERTE_CENTER.lng : parseFloat(stop.lng),
+            pickupAddress: stop.mode === "merchant" ? (stop.merchantName || stop.address) : stop.mapMethod === "link" ? (stop.address.trim() || "Lien Google Maps") : (stop.address || (stop.lat && stop.lng ? `${parseFloat(stop.lat).toFixed(5)}, ${parseFloat(stop.lng).toFixed(5)}` : "")),
+            pickupLat: (stop.mapMethod === "description" || stop.mapMethod === "link") ? 0 : parseFloat(stop.lat),
+            pickupLng: (stop.mapMethod === "description" || stop.mapMethod === "link") ? 0 : parseFloat(stop.lng),
+            pickupMapsUrl: stop.mapMethod === "link" && stop.linkInput ? stop.linkInput.trim() : null,
             deliveryAddress: deliveryMapMethod === "description"
               ? deliveryAddress
-              : (deliveryAddress || `${parseFloat(deliveryLat).toFixed(5)}, ${parseFloat(deliveryLng).toFixed(5)}`),
-            deliveryLat: deliveryMapMethod === "description" ? 0 : parseFloat(deliveryLat),
-            deliveryLng: deliveryMapMethod === "description" ? 0 : parseFloat(deliveryLng),
+              : deliveryMapMethod === "link"
+                ? (deliveryAddress.trim() || "Lien Google Maps")
+                : (deliveryAddress || (deliveryLat && deliveryLng ? `${parseFloat(deliveryLat).toFixed(5)}, ${parseFloat(deliveryLng).toFixed(5)}` : "")),
+            deliveryLat: (deliveryMapMethod === "description" || deliveryMapMethod === "link") ? 0 : parseFloat(deliveryLat),
+            deliveryLng: (deliveryMapMethod === "description" || deliveryMapMethod === "link") ? 0 : parseFloat(deliveryLng),
+            deliveryMapsUrl: deliveryMapMethod === "link" && deliveryLinkInput ? deliveryLinkInput.trim() : null,
             notes: stop.orderNotes || null,
             deliveryDescription: deliveryInstructions || null,
             merchantId: stop.merchantId || null,
             category: stop.merchantId ? merchants.find(m => m.id === stop.merchantId)?.category ?? null : null,
             priority: parseInt(priority),
             price: price ? parseFloat(price) : null,
-            locationConfirmed: deliveryMapMethod !== "description",
+            locationConfirmed: deliveryMapMethod !== "description" && deliveryMapMethod !== "link",
           }),
         })
       ));
@@ -314,8 +322,8 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
     } catch { setError("Erreur réseau"); } finally { setLoading(false); }
   };
 
-  const configuredStops = stops.filter(s => s.mapMethod === "description" ? s.address.trim() : (s.lat && s.lng)).length;
-  const hasDelivery = deliveryMapMethod === "description" ? !!deliveryAddress.trim() : !!(deliveryLat && deliveryLng);
+  const configuredStops = stops.filter(s => s.mapMethod === "description" ? s.address.trim() : s.mapMethod === "link" ? s.linkInput.trim() : (s.lat && s.lng)).length;
+  const hasDelivery = deliveryMapMethod === "description" ? !!deliveryAddress.trim() : deliveryMapMethod === "link" ? !!deliveryLinkInput.trim() : !!(deliveryLat && deliveryLng);
   const selectedCourier = couriers.find(c => c.id === assignCourierId);
 
   if (!isOpen) return null;
@@ -386,33 +394,20 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
     </div>
   );
 
-  // ── Link input with auto-parse ─────────────────────────────────────────
+  // ── Link input — stocke le lien tel quel, sans extraction de coordonnées ──
   const LinkInput = ({
-    value, onChange, onParsed,
-  }: { value: string; onChange: (v: string) => void; onParsed: (lat: number, lng: number) => void }) => {
-    const parsed = value ? parseGMapsLink(value) : null;
-    return (
-      <div className="space-y-1.5">
-        <div className="relative">
-          <Link2 size={12} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
-          <input
-            type="url" value={value} onChange={e => { onChange(e.target.value); const c = parseGMapsLink(e.target.value); if (c) onParsed(c.lat, c.lng); }}
-            placeholder="Coller un lien Google Maps…"
-            className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            style={{ border: `1px solid ${parsed ? "#6EE7B7" : "#E5E7EB"}`, background: parsed ? "#F0FDF4" : "#FAFAFA" }}
-          />
-        </div>
-        {value && !parsed && (
-          <p className="text-xs pl-1" style={{ color: "#F97316" }}>Lien non reconnu — essayez de copier depuis Google Maps → Partager → Copier le lien</p>
-        )}
-        {parsed && (
-          <div className="flex items-center gap-1.5 text-xs px-2" style={{ color: "#059669" }}>
-            <ExternalLink size={10} /> Coordonnées extraites : {parsed.lat.toFixed(5)}, {parsed.lng.toFixed(5)}
-          </div>
-        )}
-      </div>
-    );
-  };
+    value, onChange,
+  }: { value: string; onChange: (v: string) => void }) => (
+    <div className="relative">
+      <Link2 size={12} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
+      <input
+        type="text" value={value} onChange={e => onChange(e.target.value)}
+        placeholder="Coller un lien Google Maps…"
+        className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        style={{ border: `1px solid ${value ? "#6EE7B7" : "#E5E7EB"}`, background: value ? "#F0FDF4" : "#FAFAFA" }}
+      />
+    </div>
+  );
 
   return (
     <>
@@ -609,7 +604,6 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
                                       <LinkInput
                                         value={stop.linkInput}
                                         onChange={v => updateStop(stop._key, { linkInput: v })}
-                                        onParsed={(lat, lng) => updateStop(stop._key, { lat: lat.toString(), lng: lng.toString(), pinned: true })}
                                       />
                                     )}
 
@@ -693,7 +687,7 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
                           <div className="flex-1 min-w-0">
                             <span className="text-xs font-bold" style={{ color: DEST_COLOR }}>🏁 Destination finale</span>
                             <p className="text-sm font-medium truncate mt-0.5" style={{ color: hasDelivery ? "#111827" : "#9CA3AF" }}>
-                              {hasDelivery ? (deliveryAddress || `${parseFloat(deliveryLat).toFixed(4)}, ${parseFloat(deliveryLng).toFixed(4)}`) : "Localiser le client…"}
+                              {hasDelivery ? (deliveryAddress.trim() || (deliveryMapMethod === "link" ? "Lien Google Maps ✓" : (deliveryLat && deliveryLng ? `${parseFloat(deliveryLat).toFixed(4)}, ${parseFloat(deliveryLng).toFixed(4)}` : ""))) : "Localiser le client…"}
                             </p>
                           </div>
                           {deliveryCollapsed ? <ChevronDown size={14} style={{ color: "#9CA3AF" }} /> : <ChevronUp size={14} style={{ color: "#9CA3AF" }} />}
@@ -728,7 +722,6 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
                               <LinkInput
                                 value={deliveryLinkInput}
                                 onChange={setDeliveryLinkInput}
-                                onParsed={(lat, lng) => { setDeliveryLat(lat.toString()); setDeliveryLng(lng.toString()); setDeliveryPinned(true); }}
                               />
                             )}
 

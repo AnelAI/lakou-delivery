@@ -24,6 +24,10 @@ function toLatLng([lat, lng]: [number, number]): LatLng {
   return { lat, lng };
 }
 
+function hasCoords(lat: number, lng: number) {
+  return lat !== 0 || lng !== 0;
+}
+
 const STATUS_DOT: Record<string, string> = {
   available: "#22c55e",
   busy: "#3b82f6",
@@ -101,12 +105,12 @@ export function DeliveryMap({
           const pos = courierPos.get(courierId);
           if (!pos) return;
 
-          const toPickup = cDelivs.filter((d) => d.status === "assigned");
-          const toDeliver = cDelivs.filter((d) => d.status === "picked_up");
+          const toPickup = cDelivs.filter((d) => d.status === "assigned" && hasCoords(d.pickupLat, d.pickupLng));
+          const toDeliver = cDelivs.filter((d) => d.status === "picked_up" && hasCoords(d.deliveryLat, d.deliveryLng));
           if (toPickup.length === 0 && toDeliver.length === 0) return;
 
           const destKey = (d: (typeof active)[0]) => `${d.deliveryLat},${d.deliveryLng}`;
-          const uniqueDests = [...new Map(cDelivs.map((d) => [destKey(d), d])).values()];
+          const uniqueDests = [...new Map(cDelivs.filter(d => hasCoords(d.deliveryLat, d.deliveryLng)).map((d) => [destKey(d), d])).values()];
 
           let path: LatLng[] = [];
           let orderedDeliveries: typeof active = [];
@@ -135,8 +139,8 @@ export function DeliveryMap({
             }
           } else {
             const waypoints: [number, number][] = [pos];
-            if (toPickup[0]) waypoints.push([toPickup[0].pickupLat, toPickup[0].pickupLng]);
-            for (const dd of uniqueDests) waypoints.push([dd.deliveryLat, dd.deliveryLng]);
+            if (toPickup[0] && hasCoords(toPickup[0].pickupLat, toPickup[0].pickupLng)) waypoints.push([toPickup[0].pickupLat, toPickup[0].pickupLng]);
+            for (const dd of uniqueDests) if (hasCoords(dd.deliveryLat, dd.deliveryLng)) waypoints.push([dd.deliveryLat, dd.deliveryLng]);
 
             const cacheKey = `route-${courierId}-${cDelivs.map((d) => d.id).sort().join("-")}-${Math.round(pos[0] * 1000)}`;
             if (routeCacheRef.current.has(cacheKey)) {
@@ -248,7 +252,7 @@ export function DeliveryMap({
         })}
 
         {/* ── Pending delivery dashed lines ── */}
-        {pending.map((d) => (
+        {pending.filter(d => hasCoords(d.pickupLat, d.pickupLng) && hasCoords(d.deliveryLat, d.deliveryLng)).map((d) => (
           <Polyline
             key={`pending-${d.id}`}
             path={[
@@ -320,7 +324,7 @@ export function DeliveryMap({
           const color = courierColors.get(courierId) ?? "#22c55e";
           const opacity = isVisible(courierId) ? 1 : 0.1;
           return route.orderedDeliveries
-            .filter((d) => d.status === "assigned")
+            .filter((d) => d.status === "assigned" && hasCoords(d.pickupLat, d.pickupLng))
             .map((d, idx) => (
               <OverlayView
                 key={`pickup-${d.id}`}
@@ -342,7 +346,7 @@ export function DeliveryMap({
         {Array.from(courierRoutes.entries()).map(([courierId, route]) => {
           const opacity = isVisible(courierId) ? 1 : 0.1;
           const seen = new Set<string>();
-          return route.orderedDeliveries.map((d) => {
+          return route.orderedDeliveries.filter(d => hasCoords(d.deliveryLat, d.deliveryLng)).map((d) => {
             const key = `${d.deliveryLat},${d.deliveryLng}`;
             if (seen.has(key)) return null;
             seen.add(key);
@@ -365,7 +369,7 @@ export function DeliveryMap({
         })}
 
         {/* ── Pending delivery markers (no courier assigned) ── */}
-        {pending.map((d) => (
+        {pending.filter(d => hasCoords(d.pickupLat, d.pickupLng)).map((d) => (
           <OverlayView
             key={`pend-pickup-${d.id}`}
             position={{ lat: d.pickupLat, lng: d.pickupLng }}

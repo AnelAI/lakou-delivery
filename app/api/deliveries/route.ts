@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      customerName, customerPhone, pickupAddress, pickupLat, pickupLng,
-      deliveryAddress, deliveryLat, deliveryLng, notes, priority, category, merchantId,
+      customerName, customerPhone, pickupAddress, pickupLat, pickupLng, pickupMapsUrl,
+      deliveryAddress, deliveryLat, deliveryLng, deliveryMapsUrl, notes, priority, category, merchantId,
       deliveryDescription, locationConfirmed, price,
     } = body;
 
@@ -54,7 +54,9 @@ export async function POST(req: NextRequest) {
         orderNumber, customerName,
         customerPhone: customerPhone || "",
         pickupAddress, pickupLat: Number(pickupLat), pickupLng: Number(pickupLng),
+        pickupMapsUrl:   pickupMapsUrl   || null,
         deliveryAddress, deliveryLat: Number(deliveryLat), deliveryLng: Number(deliveryLng),
+        deliveryMapsUrl: deliveryMapsUrl || null,
         notes:               notes               || null,
         deliveryDescription: deliveryDescription || null,
         locationConfirmed:   locationConfirmed   !== false,

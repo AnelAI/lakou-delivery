@@ -529,9 +529,9 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                           <div style={{ fontSize: 15, color: C.ink, fontWeight: 600, lineHeight: 1.4, marginBottom: 8 }}>
                             {delivery.pickupAddress}
                           </div>
-                          {delivery.pickupLat !== 0 && delivery.pickupLng !== 0 && (
+                          {(delivery.pickupMapsUrl || (delivery.pickupLat !== 0 && delivery.pickupLng !== 0)) && (
                             <a
-                              href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.pickupLat},${delivery.pickupLng}&travelmode=driving`}
+                              href={delivery.pickupMapsUrl ?? `https://www.google.com/maps/dir/?api=1&destination=${delivery.pickupLat},${delivery.pickupLng}&travelmode=driving`}
                               target="_blank" rel="noopener noreferrer"
                               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px", borderRadius: 10, background: C.purple, color: "#fff", textDecoration: "none", fontSize: 14, fontWeight: 700, fontFamily: "Archivo, sans-serif" }}
                             >
@@ -553,9 +553,9 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                             📍 {delivery.deliveryDescription}
                           </div>
                         )}
-                        {delivery.locationConfirmed && delivery.deliveryLat !== 0 && delivery.deliveryLng !== 0 && isPickedUp && (
+                        {isPickedUp && (delivery.deliveryMapsUrl || (delivery.locationConfirmed && delivery.deliveryLat !== 0 && delivery.deliveryLng !== 0)) && (
                           <a
-                            href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.deliveryLat},${delivery.deliveryLng}&travelmode=driving`}
+                            href={delivery.deliveryMapsUrl ?? `https://www.google.com/maps/dir/?api=1&destination=${delivery.deliveryLat},${delivery.deliveryLng}&travelmode=driving`}
                             target="_blank" rel="noopener noreferrer"
                             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", borderRadius: 10, background: C.amber, color: "#fff", textDecoration: "none", fontSize: 15, fontWeight: 800, fontFamily: "Archivo, sans-serif" }}
                           >
@@ -563,7 +563,7 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                             Naviguer vers le client
                           </a>
                         )}
-                        {!delivery.locationConfirmed && (
+                        {!delivery.deliveryMapsUrl && !delivery.locationConfirmed && (
                           <div style={{ fontSize: 12, color: C.amber, fontWeight: 600, padding: "6px 10px", background: "rgba(255,255,255,0.5)", borderRadius: 8 }}>
                             ⚠️ Localisation à confirmer sur place
                           </div>
@@ -626,9 +626,9 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
                         )}
                         {isPickedUp && (
                           <>
-                            {delivery.locationConfirmed && delivery.deliveryLat !== 0 && delivery.deliveryLng !== 0 && (
+                            {(delivery.deliveryMapsUrl || (delivery.locationConfirmed && delivery.deliveryLat !== 0 && delivery.deliveryLng !== 0)) && (
                               <a
-                                href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.deliveryLat},${delivery.deliveryLng}&travelmode=driving`}
+                                href={delivery.deliveryMapsUrl ?? `https://www.google.com/maps/dir/?api=1&destination=${delivery.deliveryLat},${delivery.deliveryLng}&travelmode=driving`}
                                 target="_blank" rel="noopener noreferrer"
                                 style={{ width: "100%", padding: "16px", borderRadius: 14, background: C.blueBg, color: C.blue, border: `2px solid ${C.blueBorder}`, fontFamily: "Archivo, sans-serif", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}
                               >

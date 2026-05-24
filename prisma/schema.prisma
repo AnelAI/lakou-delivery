@@ -50,9 +50,11 @@ model Delivery {
   pickupAddress   String
   pickupLat       Float
   pickupLng       Float
+  pickupMapsUrl   String?
   deliveryAddress String
   deliveryLat     Float
   deliveryLng     Float
+  deliveryMapsUrl String?
   notes                String?
   deliveryDescription  String?
   locationConfirmed    Boolean  @default(true)
