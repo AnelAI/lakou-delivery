@@ -140,7 +140,7 @@ export function AddDeliveryForm({ isOpen, onClose, onSuccess }: Props) {
         center: BIZERTE_CENTER, zoom: 13,
         disableDefaultUI: true, zoomControl: true,
         gestureHandling: "cooperative",
-        mapTypeId: "satellite",
+        mapTypeId: "hybrid",
         styles: [
           { featureType: "poi", stylers: [{ visibility: "off" }] },
           { featureType: "transit", stylers: [{ visibility: "off" }] },

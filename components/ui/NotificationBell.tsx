@@ -1,20 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import { Bell } from "lucide-react";
 import Link from "next/link";
-
-const LS_KEY = "lakou_admin_delivery_notifs";
-
-interface DeliveryNotif { read: boolean }
-
-function getUnreadCount(): number {
-  try {
-    const notifs: DeliveryNotif[] = JSON.parse(localStorage.getItem(LS_KEY) ?? "[]");
-    return notifs.filter((n) => !n.read).length;
-  } catch { return 0; }
-}
 
 interface Props {
   activeAlerts: number;
@@ -23,11 +13,23 @@ interface Props {
 export function NotificationBell({ activeAlerts }: Props) {
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [pulse, setPulse] = useState(false);
+  const pathname = usePathname();
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    setUnreadNotifs(getUnreadCount());
+  // Load unread count from API (persistent DB)
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      if (res.ok) {
+        const notifs: { read: boolean }[] = await res.json();
+        setUnreadNotifs(notifs.filter((n) => !n.read).length);
+      }
+    } catch { /* silent */ }
   }, []);
+
+  // Re-fetch whenever the user navigates away from the alerts page
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [pathname, fetchUnreadCount]);
 
   // Listen to Pusher delivery events to bump count in real-time
   useEffect(() => {
@@ -41,6 +43,8 @@ export function NotificationBell({ activeAlerts }: Props) {
     };
 
     channel.bind(EVENTS.DELIVERY_ACKNOWLEDGED, bump);
+    channel.bind(EVENTS.DELIVERY_REFUSED, bump);
+    channel.bind(EVENTS.DELIVERY_ARRIVED, bump);
     channel.bind(EVENTS.DELIVERIES_UPDATED, (d: { status?: string }) => {
       if (d.status === "picked_up" || d.status === "delivered") bump();
     });
@@ -50,9 +54,8 @@ export function NotificationBell({ activeAlerts }: Props) {
     });
 
     return () => {
-      channel.unbind(EVENTS.DELIVERY_ACKNOWLEDGED, bump);
-      channel.unbind(EVENTS.DELIVERIES_UPDATED, bump);
-      channel.unbind(EVENTS.ALERTS_NEW, bump);
+      channel.unbind_all();
+      client.unsubscribe(ADMIN_CHANNEL);
     };
   }, []);
 
@@ -105,11 +108,11 @@ export function NotificationBell({ activeAlerts }: Props) {
             fontFamily: "Archivo, sans-serif",
           }}
         >
-          {total > 99 ? "99+" : total > 9 ? `${total}` : total}
+          {total > 99 ? "99+" : total}
         </span>
       )}
 
-      {/* Breakdown tooltip (alerts vs notifs) shown as sub-badge */}
+      {/* Sub-badge for GPS alerts */}
       {activeAlerts > 0 && unreadNotifs > 0 && (
         <span
           className="absolute flex items-center justify-center text-white font-bold leading-none"

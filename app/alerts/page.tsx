@@ -12,28 +12,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-// ── Delivery notification stored in localStorage ──────────────────────────
-const LS_KEY = "lakou_admin_delivery_notifs";
-const MAX_STORED = 100;
-
 interface DeliveryNotif {
   id: string;
-  kind: "acknowledged" | "picked_up" | "delivered";
+  kind: "acknowledged" | "picked_up" | "delivered" | "refused" | "arrived";
   courierName: string;
   orderNumber: string;
   customerName?: string;
   createdAt: string;
   read: boolean;
-}
-
-function loadDeliveryNotifs(): DeliveryNotif[] {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) ?? "[]");
-  } catch { return []; }
-}
-
-function saveDeliveryNotifs(notifs: DeliveryNotif[]) {
-  localStorage.setItem(LS_KEY, JSON.stringify(notifs.slice(0, MAX_STORED)));
 }
 
 // ── Unified feed item ─────────────────────────────────────────────────────
@@ -65,6 +51,16 @@ const notifConfig: Record<DeliveryNotif["kind"], { label: string; icon: React.Re
     icon: <Truck size={15} />,
     color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe",
   },
+  refused: {
+    label: "Course refusée",
+    icon: <AlertTriangle size={15} />,
+    color: "#dc2626", bg: "#fef2f2", border: "#fecaca",
+  },
+  arrived: {
+    label: "Arrivé chez le client",
+    icon: <MapPin size={15} />,
+    color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe",
+  },
 };
 
 type Tab = "all" | "alerts" | "notifs";
@@ -76,10 +72,29 @@ export default function AlertsPage() {
   const [tab, setTab] = useState<Tab>("all");
   const [loading, setLoading] = useState(true);
 
-  // Load delivery notifs from localStorage
-  useEffect(() => {
-    setDeliveryNotifs(loadDeliveryNotifs());
+  // Load delivery notifs from API and auto-mark all as read (clears bell badge)
+  const fetchNotifs = useCallback(async () => {
+    const res = await fetch("/api/notifications");
+    if (!res.ok) return;
+    const notifs: DeliveryNotif[] = await res.json();
+    setDeliveryNotifs(notifs);
+    // Mark all unread as read so the bell badge resets
+    const unread = notifs.filter((n) => !n.read);
+    if (unread.length > 0) {
+      await Promise.all(
+        unread.map((n) =>
+          fetch(`/api/notifications/${n.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ read: true }),
+          })
+        )
+      );
+      setDeliveryNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
+    }
   }, []);
+
+  useEffect(() => { fetchNotifs(); }, [fetchNotifs]);
 
   const fetchAlerts = useCallback(async () => {
     setLoading(true);
@@ -108,30 +123,30 @@ export default function AlertsPage() {
       }
     });
 
-    // Courier accepted a delivery
+    // Helper: prepend a new notif into state (from real-time Pusher; DB already saved server-side)
+    const addNotif = (notif: DeliveryNotif) =>
+      setDeliveryNotifs((prev) => prev.some((n) => n.id === notif.id) ? prev : [notif, ...prev]);
+
+    // Course acceptée
     channel.bind(EVENTS.DELIVERY_ACKNOWLEDGED, (data: { courierName: string; orderNumber: string; customerName: string }) => {
-      const notif: DeliveryNotif = {
-        id: `ack-${Date.now()}`,
-        kind: "acknowledged",
-        courierName: data.courierName,
-        orderNumber: data.orderNumber,
-        customerName: data.customerName,
-        createdAt: new Date().toISOString(),
-        read: false,
-      };
-      setDeliveryNotifs((prev) => {
-        const updated = [notif, ...prev];
-        saveDeliveryNotifs(updated);
-        return updated;
-      });
+      addNotif({ id: `ack-${Date.now()}`, kind: "acknowledged", courierName: data.courierName, orderNumber: data.orderNumber, customerName: data.customerName, createdAt: new Date().toISOString(), read: false });
     });
 
-    // Pickup or delivery completed
+    // Course refusée
+    channel.bind(EVENTS.DELIVERY_REFUSED, (data: { courierName: string; orderNumber: string; customerName: string }) => {
+      addNotif({ id: `refuse-${Date.now()}`, kind: "refused", courierName: data.courierName, orderNumber: data.orderNumber, customerName: data.customerName, createdAt: new Date().toISOString(), read: false });
+    });
+
+    // Coursier arrivé chez le client
+    channel.bind(EVENTS.DELIVERY_ARRIVED, (data: { courierName: string; orderNumber: string; customerName: string }) => {
+      addNotif({ id: `arrived-${Date.now()}`, kind: "arrived", courierName: data.courierName, orderNumber: data.orderNumber, customerName: data.customerName, createdAt: new Date().toISOString(), read: false });
+    });
+
+    // Colis récupéré ou livraison terminée
     channel.bind(EVENTS.DELIVERIES_UPDATED, (delivery: { status?: string; courier?: { name: string }; orderNumber?: string; customerName?: string }) => {
       if (!delivery.courier || !delivery.orderNumber) return;
       if (delivery.status !== "picked_up" && delivery.status !== "delivered") return;
-
-      const notif: DeliveryNotif = {
+      addNotif({
         id: `${delivery.status}-${delivery.orderNumber}-${Date.now()}`,
         kind: delivery.status as DeliveryNotif["kind"],
         courierName: delivery.courier.name,
@@ -139,11 +154,6 @@ export default function AlertsPage() {
         customerName: delivery.customerName,
         createdAt: new Date().toISOString(),
         read: false,
-      };
-      setDeliveryNotifs((prev) => {
-        const updated = [notif, ...prev];
-        saveDeliveryNotifs(updated);
-        return updated;
       });
     });
 
@@ -174,17 +184,26 @@ export default function AlertsPage() {
     fetchAlerts();
   };
 
-  const markAllNotifsRead = () => {
-    setDeliveryNotifs((prev) => {
-      const updated = prev.map((n) => ({ ...n, read: true }));
-      saveDeliveryNotifs(updated);
-      return updated;
-    });
+  const markAllNotifsRead = async () => {
+    const unread = deliveryNotifs.filter((n) => !n.read);
+    setDeliveryNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
+    await Promise.all(
+      unread.map((n) =>
+        fetch(`/api/notifications/${n.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ read: true }),
+        })
+      )
+    );
   };
 
-  const clearNotifs = () => {
+  const clearNotifs = async () => {
+    const ids = deliveryNotifs.map((n) => n.id);
     setDeliveryNotifs([]);
-    localStorage.removeItem(LS_KEY);
+    await Promise.all(
+      ids.map((id) => fetch(`/api/notifications/${id}`, { method: "DELETE" }))
+    );
   };
 
   // Build unified feed

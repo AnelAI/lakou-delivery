@@ -5,6 +5,16 @@ import { pusher, ADMIN_CHANNEL, courierChannel, orderChannel, EVENTS } from "@/l
 import { notifyAdmin } from "@/lib/web-push";
 import { sendCourierFcm } from "@/lib/firebase-admin";
 
+// Raw SQL insert — bypasses generated Prisma model so it works before `prisma generate`
+function saveNotif(kind: string, courierName: string, orderNumber: string, customerName: string | null, deliveryId: string) {
+  const notifId = crypto.randomUUID();
+  const now = new Date();
+  prisma.$executeRaw`
+    INSERT INTO "DeliveryNotification" (id, kind, "courierName", "orderNumber", "customerName", "deliveryId", read, "createdAt")
+    VALUES (${notifId}, ${kind}, ${courierName}, ${orderNumber}, ${customerName}, ${deliveryId}, false, ${now})
+  `.catch((e: unknown) => console.error("[saveNotif]", e));
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -229,8 +239,66 @@ export async function PATCH(
           tag: `ack-${id}`,
           url: "/",
         }).catch(console.error);
+        saveNotif("acknowledged", current.courier.name, current.orderNumber, current.customerName, id);
       }
       updateData = { status: "confirmed" };
+    } else if (action === "refuse") {
+      const current = await prisma.delivery.findUnique({
+        where: { id },
+        include: { courier: true },
+      });
+      if (current?.courierId) {
+        const remaining = await prisma.delivery.count({
+          where: {
+            courierId: current.courierId,
+            status: { in: ["assigned", "confirmed", "picked_up"] },
+            id: { not: id },
+          },
+        });
+        if (remaining === 0) {
+          await prisma.courier.update({
+            where: { id: current.courierId },
+            data: { status: "available" },
+          });
+        }
+        if (current.courier) {
+          pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERY_REFUSED, {
+            courierName: current.courier.name,
+            orderNumber: current.orderNumber,
+            customerName: current.customerName,
+          }).catch(console.error);
+          notifyAdmin({
+            title: "Course refusée ⚠️",
+            body: `${current.courier.name} a refusé la course #${current.orderNumber} — ${current.customerName}`,
+            tag: `refuse-${id}`,
+            url: "/",
+            requireInteraction: true,
+          }).catch(console.error);
+          saveNotif("refused", current.courier.name, current.orderNumber, current.customerName, id);
+        }
+      }
+      updateData = { status: "pending", courierId: null };
+    } else if (action === "arrived") {
+      const current = await prisma.delivery.findUnique({
+        where: { id },
+        include: { courier: true },
+      });
+      if (current?.courier) {
+        pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERY_ARRIVED, {
+          courierName: current.courier.name,
+          orderNumber: current.orderNumber,
+          customerName: current.customerName,
+        }).catch(console.error);
+        notifyAdmin({
+          title: "Coursier chez le client",
+          body: `${current.courier.name} est arrivé chez ${current.customerName} — #${current.orderNumber}`,
+          tag: `arrived-${id}`,
+          url: "/",
+        }).catch(console.error);
+        saveNotif("arrived", current.courier.name, current.orderNumber, current.customerName, id);
+      }
+      // No status change — just a notification event
+      updateData = {};
     }
 
     const delivery = await prisma.delivery.update({
@@ -243,7 +311,7 @@ export async function PATCH(
     // Notify customer tracking page
     pusher.trigger(orderChannel(delivery.orderNumber), EVENTS.DELIVERY_STATUS_UPDATE, delivery).catch(console.error);
 
-    // Web push to admin for courier status changes
+    // Web push + DB save for courier status changes
     if (action === "pickup" && delivery.courier) {
       notifyAdmin({
         title: "Colis récupéré",
@@ -251,6 +319,7 @@ export async function PATCH(
         tag: `pickup-${id}`,
         url: "/",
       }).catch(console.error);
+      saveNotif("picked_up", delivery.courier.name, delivery.orderNumber, delivery.customerName, id);
     } else if (action === "deliver" && delivery.courier) {
       notifyAdmin({
         title: "Course livrée",
@@ -259,6 +328,7 @@ export async function PATCH(
         url: "/",
         requireInteraction: true,
       }).catch(console.error);
+      saveNotif("delivered", delivery.courier.name, delivery.orderNumber, delivery.customerName, id);
     }
 
     return NextResponse.json(delivery);

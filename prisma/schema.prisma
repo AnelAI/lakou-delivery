@@ -104,3 +104,14 @@ model AdminPushSubscription {
   auth      String
   createdAt DateTime @default(now())
 }
+
+model DeliveryNotification {
+  id           String   @id @default(uuid())
+  kind         String   // acknowledged | picked_up | delivered | refused | arrived
+  courierName  String
+  orderNumber  String
+  customerName String?
+  deliveryId   String?
+  read         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}

@@ -217,7 +217,7 @@ export function DeliveryMap({
         zoom={13}
         onLoad={onMapLoad}
         options={{
-          mapTypeId: "satellite",
+          mapTypeId: "hybrid",
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,

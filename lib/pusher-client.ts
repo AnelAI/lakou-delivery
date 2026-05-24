@@ -30,6 +30,8 @@ export const EVENTS = {
   COURIER_LOCATION_UPDATE:    "courier-location-update",
   DELIVERY_ASSIGNED:          "delivery-assigned",
   DELIVERY_ACKNOWLEDGED:      "delivery-acknowledged",
+  DELIVERY_REFUSED:           "delivery-refused",
+  DELIVERY_ARRIVED:           "delivery-arrived",
   // Order channel (customer tracking)
   DELIVERY_STATUS_UPDATE:     "delivery-status-update",
 } as const;

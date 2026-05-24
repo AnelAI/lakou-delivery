@@ -125,7 +125,7 @@ export function EditDeliveryForm({
       const map = new window.google.maps.Map(mapPanelRef.current, {
         center, zoom: 14,
         mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
-        mapTypeId: "satellite",
+        mapTypeId: "hybrid",
         styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }],
       });
       gMapRef.current = map;
@@ -266,6 +266,8 @@ export function EditDeliveryForm({
     if (!customerName.trim()) { setError("Le nom du client est requis"); return; }
     if (deliveryMapMethod === "description") {
       if (!deliveryAddress.trim()) { setError("Décrivez l'emplacement de livraison"); return; }
+    } else if (deliveryMapMethod === "link") {
+      if (!deliveryLinkInput.trim()) { setError("Collez un lien pour la livraison"); return; }
     } else {
       if (!deliveryLat || !deliveryLng) { setError("Localisez le client sur la carte"); return; }
     }
