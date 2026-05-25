@@ -37,13 +37,27 @@ export async function sendCourierFcm(
   const app = getApp();
   const message = {
     token,
-    // Data-only: no notification field so _backgroundMessageHandler always fires
+    // notification field = FCM shows the alert via system tray regardless of app state.
+    // data field = available to onMessage / onMessageOpenedApp / getInitialMessage for app logic.
+    notification: {
+      title: payload.title,
+      body: payload.body,
+    },
     data: {
       title: payload.title,
       body: payload.body,
       ...(payload.data ?? {}),
     },
-    android: { priority: "high" as const },
+    android: {
+      priority: "high" as const,
+      notification: {
+        channelId: "lakoud_courier_v2",
+        // "notification_sound" = res/raw/notification_sound.* dans l'APK
+        sound: "notification_sound",
+        defaultVibrateTimings: true,
+        priority: "high" as const,
+      },
+    },
   };
 
   try {
