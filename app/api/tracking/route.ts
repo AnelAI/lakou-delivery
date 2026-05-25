@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, withRetry } from "@/lib/db";
-import { haversineDistance } from "@/lib/geo";
+import { prisma } from "@/lib/db";
+import { haversineDistance, isRouteDeviation, generateSimpleRoute } from "@/lib/geo";
 import { pusher, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher";
 
 const PAUSE_THRESHOLD_MINUTES = 5;
 const MOVEMENT_THRESHOLD_KM = 0.05;
+const DEVIATION_THRESHOLD_KM = 0.5;
+// Speed from Flutter geolocator is in m/s; 22.2 m/s ≈ 80 km/h
+const SPEED_VIOLATION_MS = 22.2;
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,9 +23,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Courier not found" }, { status: 404 });
     }
 
+    const speedVal = speed || 0;
+    const headingVal = heading || 0;
+
     // Save location history
     await prisma.courierLocation.create({
-      data: { courierId, lat, lng, speed: speed || 0, heading: heading || 0 },
+      data: { courierId, lat, lng, speed: speedVal, heading: headingVal },
     });
 
     // Update courier current position
@@ -31,19 +37,21 @@ export async function POST(req: NextRequest) {
       data: {
         currentLat: lat,
         currentLng: lng,
-        speed: speed || 0,
-        heading: heading || 0,
+        speed: speedVal,
+        heading: headingVal,
         lastSeen: new Date(),
         status: courier.status === "offline" ? "available" : courier.status,
       },
     });
+
+    const effectiveStatus = updatedCourier.status;
 
     // ── Pause Detection ──────────────────────────────────────────────────────
     if (courier.currentLat !== null && courier.currentLng !== null) {
       const distMoved = haversineDistance(courier.currentLat, courier.currentLng, lat, lng);
       const isMoving = distMoved > MOVEMENT_THRESHOLD_KM;
 
-      if (!isMoving && courier.status === "busy") {
+      if (!isMoving && effectiveStatus === "busy") {
         const recentLocations = await prisma.courierLocation.findMany({
           where: { courierId },
           orderBy: { timestamp: "desc" },
@@ -79,11 +87,89 @@ export async function POST(req: NextRequest) {
           }
         }
       } else if (isMoving) {
-        // Auto-resolve pause alerts when moving again
+        // Auto-résolution : le coursier s'est remis en mouvement
         await prisma.alert.updateMany({
           where: { courierId, type: "unauthorized_pause", resolved: false },
           data: { resolved: true, resolvedAt: new Date() },
         });
+      }
+    }
+
+    // ── Speed Violation Detection ────────────────────────────────────────────
+    if (speedVal > SPEED_VIOLATION_MS && effectiveStatus === "busy") {
+      const existingSpeedAlert = await prisma.alert.findFirst({
+        where: { courierId, type: "speed_violation", resolved: false },
+      });
+      if (!existingSpeedAlert) {
+        const kmh = Math.round(speedVal * 3.6);
+        const alert = await prisma.alert.create({
+          data: {
+            courierId,
+            type: "speed_violation",
+            message: `${courier.name} roule à ${kmh} km/h`,
+            severity: "critical",
+          },
+        });
+        pusher.trigger(ADMIN_CHANNEL, EVENTS.ALERTS_NEW, {
+          ...alert,
+          courier: { name: courier.name },
+        }).catch(console.error);
+      }
+    } else {
+      // Auto-résolution quand vitesse retombe sous le seuil
+      await prisma.alert.updateMany({
+        where: { courierId, type: "speed_violation", resolved: false },
+        data: { resolved: true, resolvedAt: new Date() },
+      });
+    }
+
+    // ── Route Deviation Detection ────────────────────────────────────────────
+    if (effectiveStatus === "busy") {
+      const activeDelivery = await prisma.delivery.findFirst({
+        where: {
+          courierId,
+          status: { in: ["assigned", "picked_up"] },
+        },
+        orderBy: { assignedAt: "asc" },
+      });
+
+      if (activeDelivery) {
+        // Ligne droite pickup → livraison comme référence de route (20 points)
+        const routePoints = generateSimpleRoute(
+          activeDelivery.pickupLat,
+          activeDelivery.pickupLng,
+          activeDelivery.deliveryLat,
+          activeDelivery.deliveryLng,
+          20
+        );
+
+        const deviated = isRouteDeviation(lat, lng, routePoints, DEVIATION_THRESHOLD_KM);
+
+        if (deviated) {
+          const existingDeviation = await prisma.alert.findFirst({
+            where: { courierId, type: "route_deviation", resolved: false },
+          });
+          if (!existingDeviation) {
+            const alert = await prisma.alert.create({
+              data: {
+                courierId,
+                type: "route_deviation",
+                message: `${courier.name} s'est écarté de son itinéraire (>${DEVIATION_THRESHOLD_KM * 1000}m)`,
+                severity: "warning",
+              },
+            });
+            pusher.trigger(ADMIN_CHANNEL, EVENTS.ALERTS_NEW, {
+              ...alert,
+              courier: { name: courier.name },
+            }).catch(console.error);
+          }
+        } else {
+          // Auto-résolution si le coursier est revenu sur l'itinéraire
+          await prisma.alert.updateMany({
+            where: { courierId, type: "route_deviation", resolved: false },
+            data: { resolved: true, resolvedAt: new Date() },
+          });
+        }
       }
     }
 
@@ -92,10 +178,10 @@ export async function POST(req: NextRequest) {
       courierId,
       lat,
       lng,
-      speed: speed || 0,
-      heading: heading || 0,
+      speed: speedVal,
+      heading: headingVal,
       name: courier.name,
-      status: updatedCourier.status,
+      status: effectiveStatus,
       timestamp: new Date().toISOString(),
     }).catch(console.error);
 

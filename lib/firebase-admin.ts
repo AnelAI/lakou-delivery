@@ -1,19 +1,29 @@
 import * as admin from "firebase-admin";
 
+function getPrivateKey(): string {
+  // Prefer base64-encoded key (avoids all escaping issues across environments)
+  const b64 = process.env.FIREBASE_PRIVATE_KEY_B64;
+  if (b64) return Buffer.from(b64, "base64").toString("utf8");
+  // Fallback: literal \n sequences stored in env var
+  return process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n") ?? "";
+}
+
 function getApp(): admin.app.App {
   if (admin.apps.length > 0) {
     console.log("[FCM] Reusing existing Firebase Admin app");
     return admin.apps[0]!;
   }
+  const privateKey = getPrivateKey();
   console.log("[FCM] Initializing Firebase Admin app", {
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+    privateKeyLength: privateKey.length,
+    privateKeyOk: privateKey.startsWith("-----BEGIN"),
   });
   return admin.initializeApp({
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      privateKey,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     }),
   });

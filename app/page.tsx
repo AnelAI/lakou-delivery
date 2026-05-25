@@ -134,7 +134,15 @@ export default function Dashboard() {
       const id = `${Date.now()}`;
       setToasts((prev) => [...prev, { id, ...data }]);
     });
+
+    // Vérifier toutes les 60s si des coursiers sont passés hors ligne
+    // (aucune mise à jour GPS depuis > 5 min → status "offline" + alerte)
+    const offlineCheckInterval = setInterval(() => {
+      fetch("/api/couriers/offline-check", { method: "POST" }).catch(() => {});
+    }, 60_000);
+
     return () => {
+      clearInterval(offlineCheckInterval);
       channel.unbind_all();
       client.unsubscribe(ADMIN_CHANNEL);
     };

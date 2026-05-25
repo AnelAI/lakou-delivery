@@ -50,3 +50,5 @@ next-env.d.ts
 # Mobile node_modules
 mobile/*/node_modules/
 mobile/*/.expo/
+
+.vercel
