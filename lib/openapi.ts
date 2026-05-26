@@ -8,8 +8,7 @@
  * Conventions
  * -----------
  * - All admin endpoints require the `lakou_admin_session` cookie issued by
- *   POST /api/auth/login. Public endpoints (`/api/track/{orderNumber}`) are
- *   explicitly marked with `security: []`.
+ *   POST /api/auth/login. Public endpoints are explicitly marked with `security: []`.
  * - Error responses follow the shape `{ "error": string }`.
  * - All timestamps are ISO 8601 strings (UTC).
  * - Coordinates are decimal degrees (WGS84).
@@ -401,11 +400,6 @@ export const openApiSpec = {
         name: "id", in: "path", required: true,
         description: "Alert UUID.",
         schema: { type: "string", format: "uuid" },
-      },
-      OrderNumber: {
-        name: "orderNumber", in: "path", required: true,
-        description: "Public order reference, e.g. `ORD-1714742400000-481`.",
-        schema: { type: "string" },
       },
     },
 
@@ -800,25 +794,6 @@ export const openApiSpec = {
           "200": { description: "Ping accepted.",
             content: { "application/json": { schema: { $ref: "#/components/schemas/SuccessResponse" } } } },
           "400": { $ref: "#/components/responses/BadRequest" },
-          "404": { $ref: "#/components/responses/NotFound" },
-        },
-      },
-    },
-
-    // ── Public tracking ────────────────────────────────────────────────────
-    "/api/track/{orderNumber}": {
-      get: {
-        tags: ["Public"],
-        summary: "Public order tracking",
-        description:
-          "Customer-facing endpoint — **no authentication**. Returns the " +
-          "delivery and a stripped courier object (no internal IDs beyond " +
-          "what the customer needs to render the live map).",
-        security: [],
-        parameters: [{ $ref: "#/components/parameters/OrderNumber" }],
-        responses: {
-          "200": { description: "Delivery.",
-            content: { "application/json": { schema: { $ref: "#/components/schemas/Delivery" } } } },
           "404": { $ref: "#/components/responses/NotFound" },
         },
       },

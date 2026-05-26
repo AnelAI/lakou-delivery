@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Phone, Search, MapPin, ChevronRight, Clock, Bike, X } from "lucide-react";
+import { Phone, Search, MapPin, ChevronRight, Bike, X } from "lucide-react";
 import type { Merchant } from "@/lib/types";
 
 const MANAGER_PHONE = process.env.NEXT_PUBLIC_MANAGER_PHONE || "+21629461250";
@@ -138,12 +137,11 @@ function SkeletonCard() {
 
 // ── Main page ──────────────────────────────────────────────────────────────
 export default function MarketplacePage() {
-  const router = useRouter();
   const [merchants, setMerchants]           = useState<Merchant[]>([]);
   const [loading, setLoading]               = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
   const [search, setSearch]                 = useState("");
-  const [trackInput, setTrackInput]         = useState("");
+
   const [scrolled, setScrolled]             = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -310,30 +308,6 @@ export default function MarketplacePage() {
                 {merchants.map((m) => <MerchantCardMain key={m.id} merchant={m} />)}
               </div>
             )}
-        </section>
-
-        {/* Track order */}
-        <section className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-            <Clock size={16} className="text-blue-500" />
-            Suivre une commande
-          </h3>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={trackInput}
-              onChange={(e) => setTrackInput(e.target.value.toUpperCase())}
-              placeholder="ORD-..."
-              className="flex-1 bg-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono"
-            />
-            <button
-              onClick={() => trackInput && router.push(`/track/${trackInput}`)}
-              disabled={!trackInput}
-              className="bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-30 transition-colors"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
         </section>
 
         <p className="text-center text-xs text-gray-400 pb-6">

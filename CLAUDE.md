@@ -33,7 +33,6 @@ This is a **delivery dispatch platform** for a courier company in Bizerte, Tunis
 - `app/api/` — REST API routes (auth, couriers, deliveries, tracking, alerts, stats)
 - `app/page.tsx` — Admin dashboard (live map + dispatch UI)
 - `app/[courier]/[id]/` — Courier-facing PWA (receives jobs, updates status)
-- `app/track/[orderNumber]/` — Public customer-facing order tracking (no auth)
 - `components/` — UI split into `courier/`, `delivery/`, `map/`, `ui/`
 - `lib/` — Shared utilities (see below)
 - `prisma/` — Schema and migrations
@@ -57,13 +56,13 @@ This is a **delivery dispatch platform** for a courier company in Bizerte, Tunis
 
 1. **GPS tracking**: Flutter mobile app → `POST /api/tracking` → Prisma (CourierLocation) → Pusher broadcast → admin dashboard map updates in real time
 2. **Dispatch**: Admin assigns delivery via dashboard → `PATCH /api/deliveries/[id]` → Pusher event to courier channel → courier app receives job
-3. **Status updates**: Courier taps status → `PATCH /api/deliveries/[id]` → Pusher event → admin dashboard + public tracking page update
+3. **Status updates**: Courier taps status → `PATCH /api/deliveries/[id]` → Pusher event → admin dashboard update
 
 ### Auth model
 
 - **Admins**: HMAC-signed `lakou_admin_session` cookie (set by `POST /api/auth/login`)
 - **Couriers**: Access key stored in `Courier.accessKey`, validated by `POST /api/auth/courier-login`
-- Public endpoints (`GET /api/track/:orderNumber`, `GET /api/docs`, login routes) carry `security: []` in the OpenAPI spec
+- Public endpoints (`GET /api/docs`, login routes) carry `security: []` in the OpenAPI spec
 
 ### Real-time (Pusher)
 

@@ -11,8 +11,7 @@ export const pusher = new Pusher({
 
 // ── Channel names ─────────────────────────────────────────────────────────────
 export const ADMIN_CHANNEL = "admin";
-export const courierChannel  = (id: string)          => `courier-${id}`;
-export const orderChannel    = (orderNumber: string) => `order-${orderNumber}`;
+export const courierChannel  = (id: string) => `courier-${id}`;
 
 // ── Event names ───────────────────────────────────────────────────────────────
 export const EVENTS = {
@@ -28,6 +27,4 @@ export const EVENTS = {
   DELIVERY_ACKNOWLEDGED:      "delivery-acknowledged",
   DELIVERY_REFUSED:           "delivery-refused",
   DELIVERY_ARRIVED:           "delivery-arrived",
-  // Order channel (customer tracking)
-  DELIVERY_STATUS_UPDATE:     "delivery-status-update",
 } as const;

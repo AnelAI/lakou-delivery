@@ -165,12 +165,7 @@ export default function MerchantPage({ params }: { params: Promise<{ merchantId:
             <p className="text-xs text-gray-500 mb-1">Numéro de commande</p>
             <p className="text-xl font-bold text-gray-900 font-mono">{orderNumber}</p>
           </div>
-          <button
-            onClick={() => router.push(`/track/${orderNumber}`)}
-            className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-base hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 mb-3 active:scale-95"
-          >
-            <MapPin size={18} /> Suivre ma commande <ChevronRight size={16} />
-          </button>
+
           <a href={`tel:${MANAGER_PHONE}`}
             className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 py-3.5 rounded-2xl text-sm font-semibold hover:bg-gray-50 transition-colors">
             <Phone size={15} /> Contacter Motaz

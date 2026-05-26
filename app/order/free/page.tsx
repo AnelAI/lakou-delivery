@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Phone, MapPin, Navigation, ChevronLeft, CheckCircle,
-  ChevronRight, Send, X, Pencil,
+  Phone, Navigation, ChevronLeft, CheckCircle,
+  Send, X, Pencil,
 } from "lucide-react";
 
 const MANAGER_PHONE = process.env.NEXT_PUBLIC_MANAGER_PHONE || "+21629461250";
@@ -17,8 +16,6 @@ const BIZERTE_CENTER = { lat: 37.2744, lng: 9.8739 };
 type LocationMode = "gps" | "description";
 
 export default function FreeOrderPage() {
-  const router = useRouter();
-
   const [orderNumber, setOrderNumber]           = useState("");
   const [done, setDone]                         = useState(false);
   const [customerName, setCustomerName]         = useState("");
@@ -115,12 +112,7 @@ if (locationMode === "description") return deliveryDescription.trim().length >= 
             <p className="text-xs text-gray-500 mb-1">Numéro de commande</p>
             <p className="text-xl font-bold text-gray-900 font-mono">{orderNumber}</p>
           </div>
-          <button
-            onClick={() => router.push(`/track/${orderNumber}`)}
-            className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-base hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 mb-3 active:scale-95"
-          >
-            <MapPin size={18} /> Suivre ma commande <ChevronRight size={16} />
-          </button>
+
           <a
             href={`tel:${MANAGER_PHONE}`}
             className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 py-3.5 rounded-2xl text-sm font-semibold hover:bg-gray-50 transition-colors"

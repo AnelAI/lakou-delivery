@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/db";
 import { haversineDistance, estimateTravelTime } from "@/lib/geo";
-import { pusher, ADMIN_CHANNEL, courierChannel, orderChannel, EVENTS } from "@/lib/pusher";
+import { pusher, ADMIN_CHANNEL, courierChannel, EVENTS } from "@/lib/pusher";
 import { notifyAdmin } from "@/lib/web-push";
 import { sendCourierFcm } from "@/lib/firebase-admin";
 
@@ -308,8 +308,6 @@ export async function PATCH(
     });
 
     pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_UPDATED, delivery).catch(console.error);
-    // Notify customer tracking page
-    pusher.trigger(orderChannel(delivery.orderNumber), EVENTS.DELIVERY_STATUS_UPDATE, delivery).catch(console.error);
 
     // Web push + DB save for courier status changes
     if (action === "pickup" && delivery.courier) {
