@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 const DAY_LABELS = ["D", "L", "M", "M", "J", "V", "S"]; // JS: 0=Sun
 
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
   sevenDaysAgo.setHours(0, 0, 0, 0);
 
   const [periodDeliveries, recentDeliveries] = await Promise.all([
-    db.delivery.findMany({
+    prisma.delivery.findMany({
       where: {
         courierId,
         status: "delivered",
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { deliveredAt: "desc" },
     }),
-    db.delivery.findMany({
+    prisma.delivery.findMany({
       where: {
         courierId,
         status: "delivered",
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
-  const total = periodDeliveries.reduce((sum, d) => sum + (d.price ?? 0), 0);
+  const total = periodDeliveries.reduce((sum: number, d) => sum + (d.price ?? 0), 0);
 
   return NextResponse.json({
     total: Math.round(total * 1000) / 1000,
