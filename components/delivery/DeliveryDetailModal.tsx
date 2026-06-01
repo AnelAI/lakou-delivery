@@ -23,11 +23,12 @@ interface Props {
 }
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
-  pending:   { label: "En attente", color: "text-yellow-600 bg-yellow-50" },
-  assigned:  { label: "Assignée",   color: "text-blue-600 bg-blue-50"    },
-  picked_up: { label: "En route",   color: "text-purple-600 bg-purple-50" },
-  delivered: { label: "Livrée",     color: "text-green-600 bg-green-50"   },
-  cancelled: { label: "Annulée",    color: "text-gray-500 bg-gray-100"    },
+  pending:   { label: "En attente", color: "text-yellow-600 bg-yellow-50"  },
+  assigned:  { label: "Assignée",   color: "text-blue-600 bg-blue-50"      },
+  confirmed: { label: "Acceptée",   color: "text-emerald-600 bg-emerald-50" },
+  picked_up: { label: "En route",   color: "text-purple-600 bg-purple-50"  },
+  delivered: { label: "Livrée",     color: "text-green-600 bg-green-50"    },
+  cancelled: { label: "Annulée",    color: "text-gray-500 bg-gray-100"     },
 };
 
 const PRIORITY_OPTIONS = [
@@ -362,26 +363,225 @@ export function DeliveryDetailModal({
             )}
 
             {/* ── Timeline ───────────────────────────────────────────── */}
-            {(delivery.assignedAt || delivery.pickedUpAt || delivery.deliveredAt) && (
-              <div className="bg-white rounded-2xl shadow-sm px-4 py-3 space-y-2" style={{ border: "1px solid #EEEEEE" }}>
-                <p className="text-xs font-bold" style={{ color: "#8A8A8A" }}>HISTORIQUE</p>
-                {[
-                  { label: "Assignée",  at: delivery.assignedAt,  dot: "#6366F1" },
-                  { label: "Collectée", at: delivery.pickedUpAt,  dot: "#7C3AED" },
-                  { label: "Livrée",    at: delivery.deliveredAt, dot: "#16A34A" },
-                ].filter(t => t.at).map(t => (
-                  <div key={t.label} className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-2" style={{ color: "#5A5A5A" }}>
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: t.dot }} />
-                      {t.label}
-                    </span>
-                    <span className="font-mono" style={{ color: "#9CA3AF" }}>
-                      {format(new Date(t.at!), "dd/MM HH:mm", { locale: fr })}
-                    </span>
+            {(() => {
+              const steps: {
+                key: string;
+                label: string;
+                sublabel: string;
+                at: string | null | undefined;
+                icon: string;
+                iconBg: string;
+                iconColor: string;
+                lineColor: string;
+                warnAfterMin?: number; // alerte si durée > seuil
+              }[] = [
+                {
+                  key: "created",
+                  label: "Créée",
+                  sublabel: "Commande enregistrée",
+                  at: delivery.createdAt,
+                  icon: "📋",
+                  iconBg: "#F4F4F4",
+                  iconColor: "#6B7280",
+                  lineColor: "#D1D5DB",
+                },
+                {
+                  key: "assigned",
+                  label: "Assignée",
+                  sublabel: delivery.courier ? `à ${delivery.courier.name}` : "Coursier assigné",
+                  at: delivery.assignedAt,
+                  icon: "👤",
+                  iconBg: "#EFF6FF",
+                  iconColor: "#2563EB",
+                  lineColor: "#BFDBFE",
+                  warnAfterMin: 15,
+                },
+                {
+                  key: "confirmed",
+                  label: "Acceptée",
+                  sublabel: "Le coursier a accepté",
+                  at: delivery.confirmedAt,
+                  icon: "✅",
+                  iconBg: "#ECFDF5",
+                  iconColor: "#059669",
+                  lineColor: "#A7F3D0",
+                  warnAfterMin: 10,
+                },
+                {
+                  key: "picked_up",
+                  label: "Collectée",
+                  sublabel: "Colis récupéré",
+                  at: delivery.pickedUpAt,
+                  icon: "📦",
+                  iconBg: "#F5F3FF",
+                  iconColor: "#7C3AED",
+                  lineColor: "#DDD6FE",
+                  warnAfterMin: 45,
+                },
+                {
+                  key: "delivered",
+                  label: delivery.status === "cancelled" ? "Annulée" : "Livrée",
+                  sublabel: delivery.status === "cancelled" ? "Course annulée" : "Livraison confirmée",
+                  at: delivery.deliveredAt,
+                  icon: delivery.status === "cancelled" ? "❌" : "🏠",
+                  iconBg: delivery.status === "cancelled" ? "#FEF2F2" : "#F0FDF4",
+                  iconColor: delivery.status === "cancelled" ? "#DC2626" : "#16A34A",
+                  lineColor: "#D1D5DB",
+                },
+              ];
+
+              // Statut "actif" = le dernier step ayant un timestamp
+              const statusOrder = ["created", "assigned", "confirmed", "picked_up", "delivered"];
+              const currentStatusKey = (() => {
+                const s = delivery.status;
+                if (s === "pending")   return "created";
+                if (s === "assigned")  return "assigned";
+                if (s === "confirmed") return "confirmed";
+                if (s === "picked_up") return "picked_up";
+                return "delivered";
+              })();
+              const currentIdx = statusOrder.indexOf(currentStatusKey);
+
+              // Calcule la durée entre deux timestamps (en minutes)
+              const diffMin = (a: string, b: string) =>
+                Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000);
+
+              // Timestamps ordonnés pour calculer les deltas
+              const timestamps = [
+                delivery.createdAt,
+                delivery.assignedAt,
+                delivery.confirmedAt,
+                delivery.pickedUpAt,
+                delivery.deliveredAt,
+              ];
+
+              return (
+                <div className="bg-white rounded-2xl shadow-sm px-4 py-3" style={{ border: "1px solid #EEEEEE" }}>
+                  <p className="text-xs font-bold mb-3" style={{ color: "#8A8A8A" }}>SUIVI DE COURSE</p>
+
+                  <div className="space-y-0">
+                    {steps.map((step, idx) => {
+                      const stepStatusIdx = statusOrder.indexOf(step.key);
+                      const isDone    = stepStatusIdx < currentIdx || (step.key === currentStatusKey && step.at);
+                      const isCurrent = step.key === currentStatusKey && !step.at && step.key !== "created";
+                      const isPending = !isDone && !isCurrent;
+                      const isLast    = idx === steps.length - 1;
+
+                      // Durée depuis l'étape précédente
+                      let deltaMin: number | null = null;
+                      let isLate = false;
+                      if (step.at && idx > 0) {
+                        const prevAt = timestamps[idx - 1];
+                        if (prevAt) {
+                          deltaMin = diffMin(prevAt, step.at);
+                          if (step.warnAfterMin && deltaMin > step.warnAfterMin) isLate = true;
+                        }
+                      }
+                      // Durée depuis l'étape précédente si c'est l'étape active (en cours)
+                      let activeSinceMin: number | null = null;
+                      if (!step.at && !isPending && idx > 0) {
+                        const prevAt = timestamps[idx - 1];
+                        if (prevAt) activeSinceMin = diffMin(prevAt, new Date().toISOString());
+                      }
+
+                      return (
+                        <div key={step.key} className="flex gap-3">
+                          {/* Colonne icône + ligne verticale */}
+                          <div className="flex flex-col items-center" style={{ width: 32, flexShrink: 0 }}>
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0"
+                              style={{
+                                background: isPending ? "#F4F4F4" : step.iconBg,
+                                border: isCurrent ? `2px solid ${step.iconColor}` : "2px solid transparent",
+                                opacity: isPending ? 0.4 : 1,
+                                transition: "all 0.2s",
+                              }}
+                            >
+                              {isPending ? (
+                                <span className="w-2 h-2 rounded-full" style={{ background: "#D1D5DB" }} />
+                              ) : (
+                                <span style={{ fontSize: 14 }}>{step.icon}</span>
+                              )}
+                            </div>
+                            {!isLast && (
+                              <div
+                                className="flex-1 w-0.5 my-1"
+                                style={{
+                                  background: isDone ? step.lineColor : "#F0F0F0",
+                                  minHeight: 20,
+                                }}
+                              />
+                            )}
+                          </div>
+
+                          {/* Contenu */}
+                          <div className="flex-1 pb-3" style={{ paddingTop: 4 }}>
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p
+                                  className="text-sm font-semibold leading-tight"
+                                  style={{
+                                    color: isPending ? "#D1D5DB" : isCurrent ? step.iconColor : "#111827",
+                                  }}
+                                >
+                                  {step.label}
+                                  {isCurrent && (
+                                    <span
+                                      className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full"
+                                      style={{ background: step.iconBg, color: step.iconColor }}
+                                    >
+                                      EN COURS
+                                    </span>
+                                  )}
+                                </p>
+                                <p className="text-xs mt-0.5" style={{ color: isPending ? "#E5E7EB" : "#9CA3AF" }}>
+                                  {step.sublabel}
+                                </p>
+                              </div>
+
+                              <div className="text-right shrink-0">
+                                {step.at ? (
+                                  <>
+                                    <p className="text-xs font-mono font-semibold" style={{ color: "#374151" }}>
+                                      {format(new Date(step.at), "HH:mm", { locale: fr })}
+                                    </p>
+                                    <p className="text-xs font-mono" style={{ color: "#9CA3AF" }}>
+                                      {format(new Date(step.at), "dd/MM", { locale: fr })}
+                                    </p>
+                                  </>
+                                ) : isCurrent && activeSinceMin !== null ? (
+                                  <p
+                                    className="text-xs font-semibold"
+                                    style={{ color: (step.warnAfterMin && activeSinceMin > step.warnAfterMin) ? "#DC2626" : step.iconColor }}
+                                  >
+                                    {activeSinceMin < 60
+                                      ? `${activeSinceMin} min`
+                                      : `${Math.floor(activeSinceMin / 60)}h${activeSinceMin % 60 > 0 ? String(activeSinceMin % 60).padStart(2, "0") : ""}`}
+                                  </p>
+                                ) : null}
+
+                                {/* Badge durée entre étapes */}
+                                {deltaMin !== null && (
+                                  <p
+                                    className="text-xs mt-0.5"
+                                    style={{ color: isLate ? "#DC2626" : "#9CA3AF" }}
+                                  >
+                                    {isLate ? "⚠ " : "+ "}
+                                    {deltaMin < 60
+                                      ? `${deltaMin} min`
+                                      : `${Math.floor(deltaMin / 60)}h${deltaMin % 60 > 0 ? String(deltaMin % 60).padStart(2, "0") : ""}`}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              );
+            })()}
 
             {/* ── Actions statut ─────────────────────────────────────── */}
             {isActive && (

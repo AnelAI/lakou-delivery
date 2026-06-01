@@ -63,6 +63,7 @@ export interface Delivery {
   estimatedTime?: number | null;
   distance?: number | null;
   assignedAt?: string | null;
+  confirmedAt?: string | null;
   pickedUpAt?: string | null;
   deliveredAt?: string | null;
   createdAt: string;

@@ -69,6 +69,7 @@ model Delivery {
   estimatedTime   Int?
   distance        Float?
   assignedAt      DateTime?
+  confirmedAt     DateTime?
   pickedUpAt      DateTime?
   deliveredAt     DateTime?
   createdAt       DateTime  @default(now())

@@ -242,7 +242,7 @@ export async function PATCH(
         }).catch(console.error);
         saveNotif("acknowledged", current.courier.name, current.orderNumber, current.customerName, id);
       }
-      updateData = { status: "confirmed" };
+      updateData = { status: "confirmed", confirmedAt: new Date() };
     } else if (action === "refuse") {
       const current = await prisma.delivery.findUnique({
         where: { id },
