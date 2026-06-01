@@ -20,6 +20,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 const STATUS_META: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   pending:   { label: "En attente", bg: "bg-stone-100",   text: "text-stone-600",  dot: "bg-stone-400"  },
   assigned:  { label: "Assignée",   bg: "bg-blue-50",     text: "text-blue-700",   dot: "bg-blue-500"   },
+  confirmed: { label: "Acceptée",   bg: "bg-emerald-50",  text: "text-emerald-700",dot: "bg-emerald-500"},
   picked_up: { label: "En route",   bg: "bg-purple-50",   text: "text-purple-700", dot: "bg-purple-500" },
   delivered: { label: "Livrée",     bg: "bg-lime-100",    text: "text-green-700",  dot: "bg-lime-400"   },
   cancelled: { label: "Annulée",    bg: "bg-red-50",      text: "text-red-600",    dot: "bg-red-400"    },
@@ -330,7 +331,7 @@ export function DeliveryPanel({
   const [searchQuery, setSearchQuery]       = useState("");
 
   const pending = deliveries.filter((d) => d.status === "pending");
-  const active  = deliveries.filter((d) => ["assigned", "picked_up"].includes(d.status));
+  const active  = deliveries.filter((d) => ["assigned", "confirmed", "picked_up"].includes(d.status));
   const history = deliveries.filter((d) => ["delivered", "cancelled"].includes(d.status));
 
   const baseList = activeTab === "pending" ? pending : activeTab === "active" ? active : history;

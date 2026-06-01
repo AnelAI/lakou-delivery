@@ -13,7 +13,7 @@ export interface Merchant {
   active: boolean;
   createdAt: string;
 }
-export type DeliveryStatus = "pending" | "assigned" | "picked_up" | "delivered" | "cancelled";
+export type DeliveryStatus = "pending" | "assigned" | "confirmed" | "picked_up" | "delivered" | "cancelled";
 export type AlertType = "unauthorized_pause" | "route_deviation" | "speed_violation" | "offline";
 export type AlertSeverity = "info" | "warning" | "critical";
 
