@@ -118,6 +118,7 @@ export async function PATCH(
               deliveryMapsUrl: delivery.deliveryMapsUrl ?? "",
               price: delivery.price != null ? String(delivery.price) : "0",
               notes: delivery.notes ?? "",
+              deliveryDescription: delivery.deliveryDescription ?? "",
             },
           }).catch((err) => console.error("[ASSIGN] FCM send error:", err));
         } else {

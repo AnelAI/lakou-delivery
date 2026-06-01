@@ -50,6 +50,9 @@ This is a **delivery dispatch platform** for a courier company in Bizerte, Tunis
 | `geo.ts` | Geographic distance/bearing calculations |
 | `osrm.ts` | OSRM routing API client for route optimization |
 | `useGpsTracking.ts` | React hook for GPS polling |
+| `useWebPush.ts` | Web Push subscription hook (client) |
+| `web-push.ts` | Server-side Web Push helpers |
+| `firebase-admin.ts` | Firebase Admin SDK init for FCM |
 | `seed.ts` | Database seed script |
 
 ### Data flow
