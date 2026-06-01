@@ -436,7 +436,6 @@ export function DeliveryDetailModal({
                 const s = delivery.status;
                 if (s === "pending")   return "created";
                 if (s === "assigned")  return "assigned";
-                if (s === "confirmed") return "confirmed";
                 if (s === "picked_up") return "picked_up";
                 return "delivered";
               })();
