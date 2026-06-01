@@ -12,6 +12,7 @@ const courierStatusConfig: Record<CourierStatus, { label: string; dotColor: stri
 const deliveryStatusConfig: Record<DeliveryStatus, { label: string; bg: string; color: string }> = {
   pending:   { label: "En attente", bg: "#F4F4F4",                       color: "#5A5A5A" },
   assigned:  { label: "Assignée",   bg: "rgba(59,130,246,0.1)",          color: "#1d4ed8" },
+  confirmed: { label: "Acceptée",   bg: "rgba(16,185,129,0.1)",          color: "#065f46" },
   picked_up: { label: "Récupérée",  bg: "rgba(139,92,246,0.1)",          color: "#6d28d9" },
   delivered: { label: "Livrée",     bg: "rgba(184,255,62,0.2)",          color: "#3a7d00" },
   cancelled: { label: "Annulée",    bg: "rgba(255,59,47,0.1)",           color: "#FF3B2F" },
