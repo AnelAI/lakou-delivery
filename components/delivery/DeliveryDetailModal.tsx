@@ -169,7 +169,7 @@ export function DeliveryDetailModal({
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
-                {onEdit && (
+                {onEdit && !["delivered", "cancelled"].includes(delivery.status) && (
                   <button
                     onClick={onEdit}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors hover:bg-indigo-50"

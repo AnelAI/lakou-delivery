@@ -83,6 +83,48 @@ function groupByCustomer(deliveries: Delivery[]): CustomerGroup[] {
   });
 }
 
+// ── Group deliveries by courier (for history tab) ─────────────────────────
+interface CourierGroup {
+  key: string;
+  courierName: string;
+  deliveries: Delivery[];
+  totalPrice: number;
+  latestAt: string | null;
+}
+
+function groupByCourier(deliveries: Delivery[]): CourierGroup[] {
+  const map = new Map<string, CourierGroup>();
+
+  for (const d of deliveries) {
+    const key = d.courierId ?? "unassigned";
+    const name = d.courier?.name ?? "Non assignée";
+
+    if (!map.has(key)) {
+      map.set(key, { key, courierName: name, deliveries: [], totalPrice: 0, latestAt: null });
+    }
+
+    const group = map.get(key)!;
+    group.deliveries.push(d);
+    group.totalPrice += d.price ?? 0;
+    const at = d.deliveredAt ?? d.createdAt;
+    if (!group.latestAt || at > group.latestAt) group.latestAt = at;
+  }
+
+  for (const group of map.values()) {
+    group.deliveries.sort((a, b) => {
+      const ta = a.deliveredAt ?? a.createdAt;
+      const tb = b.deliveredAt ?? b.createdAt;
+      return tb.localeCompare(ta);
+    });
+  }
+
+  return [...map.values()].sort((a, b) => {
+    if (!a.latestAt) return 1;
+    if (!b.latestAt) return -1;
+    return b.latestAt.localeCompare(a.latestAt);
+  });
+}
+
 // ── Single delivery row inside a group ────────────────────────────────────
 function DeliveryRow({
   delivery,
@@ -146,6 +188,129 @@ function DeliveryRow({
         </div>
       </div>
     </button>
+  );
+}
+
+// ── History delivery row (inside a courier group) ─────────────────────────
+function HistoryDeliveryRow({ delivery, onClick }: { delivery: Delivery; onClick: () => void }) {
+  const isDelivered = delivery.status === "delivered";
+  const emoji = CATEGORY_EMOJI[delivery.category ?? ""] ?? (delivery.merchantId ? "📦" : "💬");
+  const at = delivery.deliveredAt ?? delivery.createdAt;
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-stretch text-left border-t border-gray-100 first:border-t-0 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+    >
+      {/* status bar */}
+      <div className={`w-1 flex-shrink-0 ${isDelivered ? "bg-lime-400" : "bg-red-300"}`} />
+
+      <div className="flex items-start gap-3 px-3 py-3 flex-1 min-w-0">
+        <span className="text-base flex-shrink-0 mt-0.5">{emoji}</span>
+
+        <div className="flex-1 min-w-0">
+          {/* name + status badge */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold text-sm text-gray-900 truncate">{delivery.customerName}</span>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${isDelivered ? "bg-lime-100 text-green-700" : "bg-red-50 text-red-500"}`}>
+              {isDelivered ? "Livrée" : "Annulée"}
+            </span>
+          </div>
+
+          {/* addresses compact */}
+          <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+            <MapPin size={8} className="text-purple-300 flex-shrink-0" />
+            <span className="truncate">{delivery.pickupAddress}</span>
+            <ChevronRight size={8} className="flex-shrink-0 text-gray-300" />
+            <MapPin size={8} className="text-orange-300 flex-shrink-0" />
+            <span className="truncate">{delivery.deliveryAddress}</span>
+          </div>
+
+          {/* footer: price + time */}
+          <div className="flex items-center justify-between mt-1.5">
+            {delivery.price != null ? (
+              <span className="text-xs font-bold text-green-600">{delivery.price.toFixed(2)} DT</span>
+            ) : <span />}
+            <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+              <Clock size={8} />
+              {formatDistanceToNow(new Date(at), { addSuffix: true, locale: fr })}
+            </span>
+          </div>
+        </div>
+
+        <ChevronRight size={13} className="text-gray-300 flex-shrink-0 self-center" />
+      </div>
+    </button>
+  );
+}
+
+// ── Courier group card (history tab) ──────────────────────────────────────
+function CourierGroupCard({
+  group,
+  onOpenDelivery,
+}: {
+  group: CourierGroup;
+  onOpenDelivery: (d: Delivery) => void;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const deliveredCount  = group.deliveries.filter((d) => d.status === "delivered").length;
+  const cancelledCount  = group.deliveries.filter((d) => d.status === "cancelled").length;
+  const isUnassigned    = group.key === "unassigned";
+
+  return (
+    <div
+      className="mx-3 mb-3 rounded-2xl border border-gray-200 overflow-hidden shadow-sm bg-white"
+      style={{ width: "calc(100% - 1.5rem)" }}
+    >
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+      >
+        {/* Avatar */}
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${isUnassigned ? "bg-gray-100 text-gray-400" : "bg-indigo-100 text-indigo-700"}`}>
+          {isUnassigned ? <Truck size={16} /> : group.courierName.charAt(0).toUpperCase()}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <span className="font-bold text-gray-900 text-sm truncate block">{group.courierName}</span>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            {deliveredCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-lime-100 text-green-700">
+                ✓ {deliveredCount} livrée{deliveredCount > 1 ? "s" : ""}
+              </span>
+            )}
+            {cancelledCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-50 text-red-500">
+                ✕ {cancelledCount} annulée{cancelledCount > 1 ? "s" : ""}
+              </span>
+            )}
+            {group.latestAt && (
+              <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                <Clock size={8} />
+                {formatDistanceToNow(new Date(group.latestAt), { addSuffix: true, locale: fr })}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          {group.totalPrice > 0 && (
+            <span className="text-sm font-bold text-green-600">{group.totalPrice.toFixed(2)} DT</span>
+          )}
+          {expanded
+            ? <ChevronDown size={15} className="text-gray-400" />
+            : <ChevronRight size={15} className="text-gray-400" />}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-gray-100">
+          {group.deliveries.map((d) => (
+            <HistoryDeliveryRow key={d.id} delivery={d} onClick={() => onOpenDelivery(d)} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -349,7 +514,9 @@ export function DeliveryPanel({
       })
     : baseList;
 
-  const groups = groupByCustomer(displayList);
+  const groups = activeTab === "history"
+    ? { type: "courier" as const, list: groupByCourier(displayList) }
+    : { type: "customer" as const, list: groupByCustomer(displayList) };
 
   const tabs = [
     { id: "pending" as const, label: "Attente",    count: pending.length,  color: "text-yellow-600", dot: "bg-yellow-400" },
@@ -425,7 +592,7 @@ export function DeliveryPanel({
 
       {/* List */}
       <div className="flex-1 overflow-y-auto pt-3 pb-20">
-        {groups.length === 0 ? (
+        {groups.list.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-6">
             <span className="text-5xl mb-3">
               {searchQuery ? "🔍" : activeTab === "pending" ? "⏳" : activeTab === "active" ? "🏍️" : "✅"}
@@ -447,13 +614,13 @@ export function DeliveryPanel({
               </button>
             )}
           </div>
+        ) : groups.type === "courier" ? (
+          groups.list.map((g) => (
+            <CourierGroupCard key={g.key} group={g} onOpenDelivery={setSelectedDelivery} />
+          ))
         ) : (
-          groups.map((group) => (
-            <GroupCard
-              key={group.key}
-              group={group}
-              onOpenDelivery={setSelectedDelivery}
-            />
+          groups.list.map((g) => (
+            <GroupCard key={g.key} group={g} onOpenDelivery={setSelectedDelivery} />
           ))
         )}
       </div>
