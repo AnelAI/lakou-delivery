@@ -46,6 +46,8 @@ export async function PATCH(
     const data: Record<string, unknown> = { ...rest };
     if (isOnline !== undefined) {
       data.status = isOnline ? "available" : "offline";
+      // Persist the courier's explicit intent so offline-check respects it
+      data.manuallyOnline = isOnline;
     }
 
     const courier = await prisma.courier.update({

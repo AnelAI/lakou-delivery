@@ -15,7 +15,8 @@ model Courier {
   photo       String?
   accessKey   String?  @unique
   fcmToken    String?
-  status      String   @default("offline")
+  status        String   @default("offline")
+  manuallyOnline Boolean  @default(false)
   currentLat  Float?
   currentLng  Float?
   lastSeen    DateTime?

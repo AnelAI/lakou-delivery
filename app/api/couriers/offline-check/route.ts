@@ -16,9 +16,11 @@ export async function POST() {
     const cutoff = new Date(Date.now() - OFFLINE_THRESHOLD_MINUTES * 60 * 1000);
 
     // Trouver les coursiers actifs (non-offline) qui n'ont plus donné signe de vie
+    // et qui n'ont PAS explicitement choisi d'être en ligne (manuallyOnline = false)
     const stale = await prisma.courier.findMany({
       where: {
         status: { not: "offline" },
+        manuallyOnline: false,
         lastSeen: { lt: cutoff },
         // Seulement ceux qui ont déjà envoyé une position (lastSeen not null)
         NOT: { lastSeen: null },
