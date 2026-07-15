@@ -125,7 +125,7 @@ export default function Dashboard() {
       );
     });
     channel.bind(EVENTS.ALERTS_NEW, (alert: Alert) => {
-      setAlerts((prev) => [alert, ...prev]);
+      setAlerts((prev) => (prev.some((a) => a.id === alert.id) ? prev : [alert, ...prev]));
     });
     channel.bind(EVENTS.ALERTS_UPDATED, (updated: Alert) => {
       setAlerts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
