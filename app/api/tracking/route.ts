@@ -9,6 +9,30 @@ const DEVIATION_THRESHOLD_KM = 0.5;
 // Speed from Flutter geolocator is in m/s; 22.2 m/s ≈ 80 km/h
 const SPEED_VIOLATION_MS = 22.2;
 
+// Résout les alertes non résolues d'un type donné ET notifie le dashboard,
+// sinon elles restent affichées côté admin jusqu'au prochain rechargement.
+async function autoResolveAlerts(courierId: string, type: string, courierName: string) {
+  const unresolved = await prisma.alert.findMany({
+    where: { courierId, type, resolved: false },
+  });
+  if (unresolved.length === 0) return;
+
+  const resolvedAt = new Date();
+  await prisma.alert.updateMany({
+    where: { id: { in: unresolved.map((a) => a.id) } },
+    data: { resolved: true, resolvedAt },
+  });
+
+  for (const alert of unresolved) {
+    pusher.trigger(ADMIN_CHANNEL, EVENTS.ALERTS_UPDATED, {
+      ...alert,
+      resolved: true,
+      resolvedAt,
+      courier: { name: courierName },
+    }).catch(console.error);
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -88,10 +112,7 @@ export async function POST(req: NextRequest) {
         }
       } else if (isMoving) {
         // Auto-résolution : le coursier s'est remis en mouvement
-        await prisma.alert.updateMany({
-          where: { courierId, type: "unauthorized_pause", resolved: false },
-          data: { resolved: true, resolvedAt: new Date() },
-        });
+        await autoResolveAlerts(courierId, "unauthorized_pause", courier.name);
       }
     }
 
@@ -117,10 +138,7 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // Auto-résolution quand vitesse retombe sous le seuil
-      await prisma.alert.updateMany({
-        where: { courierId, type: "speed_violation", resolved: false },
-        data: { resolved: true, resolvedAt: new Date() },
-      });
+      await autoResolveAlerts(courierId, "speed_violation", courier.name);
     }
 
     // ── Route Deviation Detection ────────────────────────────────────────────
@@ -165,10 +183,7 @@ export async function POST(req: NextRequest) {
           }
         } else {
           // Auto-résolution si le coursier est revenu sur l'itinéraire
-          await prisma.alert.updateMany({
-            where: { courierId, type: "route_deviation", resolved: false },
-            data: { resolved: true, resolvedAt: new Date() },
-          });
+          await autoResolveAlerts(courierId, "route_deviation", courier.name);
         }
       }
     }
