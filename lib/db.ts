@@ -1,8 +1,21 @@
 import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
+
+// ── Neon serverless driver ─────────────────────────────────────────────────
+// On Vercel's serverless runtime, raw TCP connections to Neon's pooler
+// (port 5432) are unreliable — they work locally but intermittently fail in
+// production with "Can't reach database server". The Neon serverless driver
+// talks to Neon over WebSocket instead, which is the connection path Neon
+// supports for serverless/edge environments. In Node (no global WebSocket) we
+// must supply the constructor explicitly.
+neonConfig.webSocketConstructor = ws;
 
 // ── Connection-error detection ─────────────────────────────────────────────
-// Neon free tier auto-suspends after 5 min of inactivity. The TCP cold-start
-// takes ~5-10 s, during which all connection attempts throw this error.
+// Neon free tier auto-suspends after 5 min of inactivity. Waking the compute
+// takes ~5-10 s, during which connection attempts throw this error. The retry
+// below rides out that window so the first request after idle still succeeds.
 function isNeonColdStart(e: unknown): boolean {
   if (e instanceof Prisma.PrismaClientInitializationError) return true;
   if (e instanceof Error) {
@@ -26,7 +39,10 @@ function sleep(ms: number) {
 
 // ── Singleton with auto-retry middleware ───────────────────────────────────
 function createPrisma() {
-  const client = new PrismaClient({ log: ["error"] });
+  const connectionString = process.env.DATABASE_URL;
+  const pool = new Pool({ connectionString });
+  const adapter = new PrismaNeon(pool);
+  const client = new PrismaClient({ adapter, log: ["error"] });
 
   // $use wraps every query; retries on Neon cold-start errors with backoff.
   // (deprecated in Prisma 5 but still fully functional until Prisma 6)
