@@ -1,6 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Keep the Neon serverless driver and its WebSocket transport out of the
+  // server bundle. `ws` has optional native bindings and dynamic requires that
+  // break when webpack/Turbopack inlines them, which made every DB-backed API
+  // route throw at runtime (500s). Loading them as real node_modules at runtime
+  // avoids that.
+  serverExternalPackages: [
+    "@prisma/adapter-neon",
+    "@neondatabase/serverless",
+    "ws",
+  ],
   async headers() {
     return [
       {
