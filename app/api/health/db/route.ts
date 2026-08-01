@@ -24,23 +24,42 @@ export async function GET() {
     directHost: connectionHost(process.env.DIRECT_URL),
   };
 
+  const result: Record<string, unknown> = { env };
+
+  // 1) Can we reach the database at all?
   try {
     const started = Date.now();
     await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json({ ok: true, tookMs: Date.now() - started, env });
+    result.connection = { ok: true, tookMs: Date.now() - started };
   } catch (e) {
     const err = e as { message?: string; name?: string; code?: string };
-    return NextResponse.json(
-      {
-        ok: false,
-        env,
-        error: {
-          name: err?.name ?? null,
-          code: err?.code ?? null,
-          message: err?.message ?? String(e),
-        },
-      },
-      { status: 200 }, // return 200 so the JSON is easy to read in the browser
-    );
+    result.connection = {
+      ok: false,
+      error: { name: err?.name ?? null, code: err?.code ?? null, message: err?.message ?? String(e) },
+    };
+    return NextResponse.json({ ok: false, ...result }, { status: 200 });
+  }
+
+  // 2) Do the tables exist (did the migrations run against THIS database)?
+  try {
+    const rows = await prisma.$queryRaw<{ table_name: string }[]>`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public' ORDER BY table_name`;
+    const tables = rows.map((r) => r.table_name);
+    const courierCount = await prisma.courier.count();
+    result.schema = {
+      ok: true,
+      tableCount: tables.length,
+      tables,
+      courierCount,
+    };
+    return NextResponse.json({ ok: true, ...result }, { status: 200 });
+  } catch (e) {
+    const err = e as { message?: string; name?: string; code?: string };
+    result.schema = {
+      ok: false,
+      error: { name: err?.name ?? null, code: err?.code ?? null, message: err?.message ?? String(e) },
+    };
+    return NextResponse.json({ ok: false, ...result }, { status: 200 });
   }
 }
