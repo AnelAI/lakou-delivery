@@ -42,8 +42,10 @@ export async function GET() {
 
   // 2) Do the tables exist (did the migrations run against THIS database)?
   try {
+    // Cast to text: information_schema.table_name is Postgres type `name`,
+    // which Prisma's $queryRaw cannot deserialize directly.
     const rows = await prisma.$queryRaw<{ table_name: string }[]>`
-      SELECT table_name FROM information_schema.tables
+      SELECT table_name::text AS table_name FROM information_schema.tables
       WHERE table_schema = 'public' ORDER BY table_name`;
     const tables = rows.map((r) => r.table_name);
     const courierCount = await prisma.courier.count();
