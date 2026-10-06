@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, use, useCallback } from "react";
 import type { Courier, Delivery } from "@/lib/types";
 import { useGpsTracking } from "@/lib/useGpsTracking";
 import { haversineDistance } from "@/lib/geo";
-import { getPusherClient, courierChannel, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
+import { getPusherClient, courierChannel, EVENTS } from "@/lib/pusher-client";
 import { Navigation, Package, CheckCircle, Clock, MapPin, Phone, AlertTriangle, Download, ChevronDown, ChevronUp } from "lucide-react";
 
 const CourierLiveMap = dynamic(
@@ -66,7 +66,7 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchDeliveries = useCallback(async () => {
-    const res = await fetch(`/api/deliveries?courierId=${id}`);
+    const res = await fetch(`/api/deliveries?courierId=${id}&historyDays=1`);
     if (res.ok) setDeliveries(await res.json());
   }, [id]);
 
@@ -95,18 +95,18 @@ export default function CourierPage({ params }: { params: Promise<{ id: string }
     init();
     localStorage.setItem("lakou_courier_id", id);
 
+    // Only this courier's channel: the "admin" channel carries every GPS
+    // update of every courier, and each delivery counts as a Pusher message.
+    // The server sends delivery updates to the courier's own channel.
     const client = getPusherClient();
-    const adminCh = client.subscribe(ADMIN_CHANNEL);
-    adminCh.bind(EVENTS.DELIVERIES_UPDATED, fetchDeliveries);
-    adminCh.bind(EVENTS.DELIVERIES_NEW, fetchDeliveries);
     const courierCh = client.subscribe(courierChannel(id));
     courierCh.bind(EVENTS.DELIVERY_ASSIGNED, fetchDeliveries);
+    courierCh.bind(EVENTS.DELIVERIES_UPDATED, fetchDeliveries);
 
     return () => {
       controller.abort();
-      adminCh.unbind(EVENTS.DELIVERIES_UPDATED, fetchDeliveries);
-      adminCh.unbind(EVENTS.DELIVERIES_NEW, fetchDeliveries);
-      client.unsubscribe(ADMIN_CHANNEL);
+      courierCh.unbind(EVENTS.DELIVERY_ASSIGNED, fetchDeliveries);
+      courierCh.unbind(EVENTS.DELIVERIES_UPDATED, fetchDeliveries);
       client.unsubscribe(courierChannel(id));
     };
   }, [id, fetchDeliveries]);

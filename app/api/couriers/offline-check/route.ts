@@ -40,29 +40,38 @@ export async function POST() {
       data: { status: "offline" },
     });
 
-    // Créer une alerte pour chaque coursier passé hors ligne (si pas déjà ouverte)
-    for (const c of stale) {
-      const existing = await prisma.alert.findFirst({
-        where: { courierId: c.id, type: "offline", resolved: false },
-      });
-      if (!existing) {
-        const alert = await prisma.alert.create({
-          data: {
-            courierId: c.id,
-            type: "offline",
-            message: `${c.name} ne répond plus (aucune position depuis ${OFFLINE_THRESHOLD_MINUTES} min)`,
-            severity: "warning",
-          },
-        });
-        pusher.trigger(ADMIN_CHANNEL, EVENTS.ALERTS_NEW, {
-          ...alert,
-          courier: { name: c.name },
-        }).catch(console.error);
-      }
-    }
+    // Créer une alerte pour chaque coursier passé hors ligne (si pas déjà ouverte).
+    // Une seule requête pour les alertes existantes, puis les créations en parallèle.
+    const existing = await prisma.alert.findMany({
+      where: { courierId: { in: staleIds }, type: "offline", resolved: false },
+      select: { courierId: true },
+    });
+    const alreadyAlerted = new Set(existing.map((a) => a.courierId));
+    const created = await Promise.all(
+      stale
+        .filter((c) => !alreadyAlerted.has(c.id))
+        .map((c) =>
+          prisma.alert
+            .create({
+              data: {
+                courierId: c.id,
+                type: "offline",
+                message: `${c.name} ne répond plus (aucune position depuis ${OFFLINE_THRESHOLD_MINUTES} min)`,
+                severity: "warning",
+              },
+            })
+            .then((alert) => ({ ...alert, courier: { name: c.name } }))
+        )
+    );
 
-    // Notifier le dashboard que les statuts des coursiers ont changé
-    pusher.trigger(ADMIN_CHANNEL, EVENTS.COURIERS_UPDATED, {}).catch(console.error);
+    // Un seul appel Pusher : nouvelles alertes + statuts des coursiers changés
+    const events = [
+      ...created.map((data) => ({ channel: ADMIN_CHANNEL, name: EVENTS.ALERTS_NEW, data })),
+      { channel: ADMIN_CHANNEL, name: EVENTS.COURIERS_UPDATED, data: {} },
+    ];
+    for (let i = 0; i < events.length; i += 10) {
+      pusher.triggerBatch(events.slice(i, i + 10)).catch(console.error);
+    }
 
     return NextResponse.json({ markedOffline: stale.length });
   } catch (error) {

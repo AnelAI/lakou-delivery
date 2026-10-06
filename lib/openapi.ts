@@ -543,6 +543,11 @@ export const openApiSpec = {
           { name: "courierId", in: "query",
             schema: { type: "string", format: "uuid" },
             description: "Restrict to a single courier." },
+          { name: "historyDays", in: "query",
+            schema: { type: "integer", minimum: 1 },
+            description:
+              "Keep every open delivery but only the finished ones (delivered/cancelled) " +
+              "from the last N calendar days (1 = today). Omit to return the full history." },
         ],
         responses: {
           "200": {
@@ -785,7 +790,11 @@ export const openApiSpec = {
           "**Pause detection**: when a *busy* courier remains within 50 m " +
           "for ≥ 5 minutes, an `unauthorized_pause` alert is created " +
           "automatically (severity escalates to `critical` after 10 min). " +
-          "Resumed motion auto-resolves the alert.",
+          "Resumed motion auto-resolves the alert.\n\n" +
+          "**Rate limit**: a ping received less than 3 s after the courier's " +
+          "previous one is ignored and answered with `{ success: true, throttled: true }`. " +
+          "Clients should send at most one position every 10–30 s.\n\n" +
+          "`speed` is expected in **m/s**.",
         requestBody: {
           required: true,
           content: { "application/json": { schema: { $ref: "#/components/schemas/TrackingPing" } } },

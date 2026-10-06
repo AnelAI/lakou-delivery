@@ -1,42 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
 import type { Stats } from "@/lib/types";
-import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import { Users, Package, Truck, CheckCircle, AlertTriangle, Clock } from "lucide-react";
 
 interface Props {
-  initialStats: Stats;
+  stats: Stats;
 }
 
-export function StatsBar({ initialStats }: Props) {
-  const [stats, setStats] = useState<Stats>(initialStats);
-
-  const refreshStats = useCallback(async () => {
-    const res = await fetch("/api/stats");
-    if (res.ok) setStats(await res.json());
-  }, []);
-
-  useEffect(() => {
-    const client = getPusherClient();
-    const channel = client.subscribe(ADMIN_CHANNEL);
-
-    const refresh = () => { refreshStats(); };
-    channel.bind(EVENTS.DELIVERIES_UPDATED, refresh);
-    channel.bind(EVENTS.DELIVERIES_NEW, refresh);
-    channel.bind(EVENTS.COURIERS_UPDATED, refresh);
-    channel.bind(EVENTS.ALERTS_NEW, refresh);
-    channel.bind(EVENTS.ALERTS_UPDATED, refresh);
-
-    const interval = setInterval(refreshStats, 30000);
-
-    return () => {
-      channel.unbind_all();
-      client.unsubscribe(ADMIN_CHANNEL);
-      clearInterval(interval);
-    };
-  }, [refreshStats]);
-
+// Pure display: the dashboard derives the stats from the data it already
+// loads, so this component no longer polls /api/stats or subscribes to Pusher.
+export function StatsBar({ stats }: Props) {
   const items = [
     { icon: <Users size={14} />, label: "Actifs", value: `${stats.activeCouriers}/${stats.totalCouriers}`, style: { color: "#0A0A0A", background: "#F4F4F4" } },
     { icon: <Clock size={14} />, label: "En attente", value: stats.pendingDeliveries, style: { color: stats.pendingDeliveries > 0 ? "#FF3B2F" : "#5A5A5A", background: stats.pendingDeliveries > 0 ? "rgba(255,59,47,0.08)" : "#F4F4F4" } },

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { Courier, Delivery, Alert, Stats, LocationUpdate } from "@/lib/types";
 import { CourierPanel } from "@/components/courier/CourierPanel";
 import { DeliveryPanel } from "@/components/delivery/DeliveryPanel";
@@ -13,6 +13,7 @@ import { AddDeliveryForm } from "@/components/delivery/AddDeliveryForm";
 import { CourierDeliveriesModal } from "@/components/courier/CourierDeliveriesModal";
 import { getPusherClient, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher-client";
 import { useWebPush } from "@/lib/useWebPush";
+import { ACTIVE_DELIVERY_STATUSES } from "@/lib/delivery-status";
 import {
   RefreshCw, Users, Package, Map as MapIcon, LayoutDashboard, Store, LogOut,
 } from "lucide-react";
@@ -35,20 +36,15 @@ const DeliveryMap = dynamic(
 
 type MobileTab = "map" | "couriers" | "deliveries";
 
+// Finished deliveries older than this are not loaded on the dashboard.
+const HISTORY_DAYS = 7;
+
 export default function Dashboard() {
   const router = useRouter();
   useWebPush();
   const [couriers, setCouriers] = useState<Courier[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [stats, setStats] = useState<Stats>({
-    totalCouriers: 0,
-    activeCouriers: 0,
-    pendingDeliveries: 0,
-    activeDeliveries: 0,
-    deliveredToday: 0,
-    activeAlerts: 0,
-  });
   const [selectedCourierId, setSelectedCourierId] = useState<string | null>(null);
   const [courierDeliveriesOpen, setCourierDeliveriesOpen] = useState<Courier | null>(null);
   const [visibleCourierIds, setVisibleCourierIds] = useState<Set<string>>(new Set()); // empty = all
@@ -88,18 +84,26 @@ export default function Dashboard() {
   const hideAllCouriers  = () =>
     setVisibleCourierIds(new Set(couriers.filter((c) => c.status !== "offline").map((c) => c.id)));
 
-  const fetchAll = useCallback(async () => {
+  // ── Data loading ───────────────────────────────────────────────────────────
+  // Each Pusher event only reloads what it can have changed, and bursts of
+  // events (e.g. an action + its own broadcast) are coalesced into one fetch.
+  type Resource = "couriers" | "deliveries" | "alerts";
+  const pendingRef = useRef<Set<Resource>>(new Set());
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const load = useCallback(async (resources: Set<Resource>) => {
     try {
-      const [couriersRes, deliveriesRes, alertsRes, statsRes] = await Promise.all([
-        fetch("/api/couriers"),
-        fetch("/api/deliveries"),
-        fetch("/api/alerts?resolved=false"),
-        fetch("/api/stats"),
+      await Promise.all([
+        resources.has("couriers") && fetch("/api/couriers").then(async (r) => {
+          if (r.ok) setCouriers(await r.json());
+        }),
+        resources.has("deliveries") && fetch(`/api/deliveries?historyDays=${HISTORY_DAYS}`).then(async (r) => {
+          if (r.ok) setDeliveries(await r.json());
+        }),
+        resources.has("alerts") && fetch("/api/alerts?resolved=false").then(async (r) => {
+          if (r.ok) setAlerts(await r.json());
+        }),
       ]);
-      if (couriersRes.ok) setCouriers(await couriersRes.json());
-      if (deliveriesRes.ok) setDeliveries(await deliveriesRes.json());
-      if (alertsRes.ok) setAlerts(await alertsRes.json());
-      if (statsRes.ok) setStats(await statsRes.json());
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
@@ -107,13 +111,43 @@ export default function Dashboard() {
     }
   }, []);
 
+  const refresh = useCallback((...resources: Resource[]) => {
+    resources.forEach((r) => pendingRef.current.add(r));
+    if (timerRef.current) return;
+    timerRef.current = setTimeout(() => {
+      const batch = pendingRef.current;
+      pendingRef.current = new Set();
+      timerRef.current = null;
+      load(batch);
+    }, 300);
+  }, [load]);
+
+  const fetchAll = useCallback(() => refresh("couriers", "deliveries", "alerts"), [refresh]);
+
+  // Stats are derived from data already loaded instead of polling /api/stats.
+  const stats = useMemo<Stats>(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    return {
+      totalCouriers: couriers.length,
+      activeCouriers: couriers.filter((c) => c.status === "available" || c.status === "busy").length,
+      pendingDeliveries: deliveries.filter((d) => d.status === "pending").length,
+      activeDeliveries: deliveries.filter((d) => (ACTIVE_DELIVERY_STATUSES as readonly string[]).includes(d.status)).length,
+      deliveredToday: deliveries.filter(
+        (d) => d.status === "delivered" && d.deliveredAt && new Date(d.deliveredAt) >= todayStart
+      ).length,
+      activeAlerts: alerts.filter((a) => !a.resolved).length,
+    };
+  }, [couriers, deliveries, alerts]);
+
   useEffect(() => {
-    fetchAll();
+    load(new Set(["couriers", "deliveries", "alerts"]));
     const client = getPusherClient();
     const channel = client.subscribe(ADMIN_CHANNEL);
-    channel.bind(EVENTS.COURIERS_UPDATED, fetchAll);
-    channel.bind(EVENTS.DELIVERIES_NEW, fetchAll);
-    channel.bind(EVENTS.DELIVERIES_UPDATED, fetchAll);
+    channel.bind(EVENTS.COURIERS_UPDATED, () => refresh("couriers"));
+    channel.bind(EVENTS.DELIVERIES_NEW, () => refresh("deliveries"));
+    // Assigning/finishing a delivery also changes the courier's status.
+    channel.bind(EVENTS.DELIVERIES_UPDATED, () => refresh("deliveries", "couriers"));
     // Live GPS: update only the moving courier's position in state
     channel.bind(EVENTS.COURIER_LOCATION_UPDATE, (data: LocationUpdate) => {
       setCouriers((prev) =>
@@ -137,16 +171,19 @@ export default function Dashboard() {
 
     // Vérifier toutes les 60s si des coursiers sont passés hors ligne
     // (aucune mise à jour GPS depuis > 5 min → status "offline" + alerte)
+    // (seulement si l'onglet est visible : inutile d'appeler l'API en arrière-plan)
     const offlineCheckInterval = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
       fetch("/api/couriers/offline-check", { method: "POST" }).catch(() => {});
     }, 60_000);
 
     return () => {
       clearInterval(offlineCheckInterval);
+      if (timerRef.current) clearTimeout(timerRef.current);
       channel.unbind_all();
       client.unsubscribe(ADMIN_CHANNEL);
     };
-  }, [fetchAll]);
+  }, [load, refresh]);
 
   const handleAssign = async (deliveryId: string, courierId: string) => {
     const res = await fetch(`/api/deliveries/${deliveryId}`, {
@@ -154,7 +191,7 @@ export default function Dashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "assign", courierId }),
     });
-    if (res.ok) fetchAll();
+    if (res.ok) refresh("deliveries", "couriers");
   };
 
   const handleStatusChange = async (deliveryId: string, action: string) => {
@@ -163,7 +200,7 @@ export default function Dashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),
     });
-    if (res.ok) fetchAll();
+    if (res.ok) refresh("deliveries", "couriers");
   };
 
   const handleConfirmLocation = async (deliveryId: string, lat: number, lng: number) => {
@@ -172,7 +209,7 @@ export default function Dashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "confirm-location", lat, lng }),
     });
-    if (res.ok) fetchAll();
+    if (res.ok) refresh("deliveries");
   };
 
   const handleConfirmPickup = async (deliveryId: string, lat: number, lng: number) => {
@@ -181,7 +218,7 @@ export default function Dashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "confirm-pickup", lat, lng }),
     });
-    if (res.ok) fetchAll();
+    if (res.ok) refresh("deliveries");
   };
 
   const activeAlerts = alerts.filter((a) => !a.resolved);
@@ -211,7 +248,7 @@ export default function Dashboard() {
 
         {/* Stats bar — scrollable, hidden on very small screens */}
         <div className="flex-1 mx-2 md:mx-6 overflow-x-auto hidden sm:block">
-          <StatsBar initialStats={stats} />
+          <StatsBar stats={stats} />
         </div>
 
         {/* Actions */}
@@ -286,7 +323,7 @@ export default function Dashboard() {
 
       {/* Stats bar mobile (visible sous sm) */}
       <div className="sm:hidden bg-white px-3 py-1.5 overflow-x-auto" style={{ borderBottom: "1px solid #E8E8E8" }}>
-        <StatsBar initialStats={stats} />
+        <StatsBar stats={stats} />
       </div>
 
       {/* ── Desktop layout (md+) : 3 colonnes ──────────────────────────────── */}

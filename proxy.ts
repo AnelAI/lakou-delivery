@@ -14,6 +14,7 @@ const PUBLIC_PREFIXES = [
   "/api/earnings",
   "/api/fcm-check",
   "/api/push",
+  "/api/cron",       // protected by CRON_SECRET inside the route
   "/order",
   "/courier",
   "/_next",
@@ -39,5 +40,10 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Skip the proxy for static files and for the high-frequency public GPS
+  // endpoint (/api/tracking): they are public anyway, so running the proxy
+  // there only costs an extra invocation per request.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|icons/|sw\\.js|manifest|api/tracking|.*\\.(?:png|jpg|jpeg|svg|ico|webp)$).*)",
+  ],
 };

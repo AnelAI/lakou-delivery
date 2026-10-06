@@ -22,13 +22,18 @@ interface Options {
   onError?: (msg: string) => void;
 }
 
+// Each position costs one API call, several DB writes and one Pusher message,
+// so we send on a fixed cadence rather than on every GPS fix (~1/s).
 function getSendIntervalMs(speedKmh: number): number {
-  if (speedKmh > 20) return 5_000;
-  if (speedKmh > 3)  return 10_000;
+  if (speedKmh > 20) return 10_000;
+  if (speedKmh > 3)  return 15_000;
   return 30_000;
 }
 
-const MIN_DISTANCE_TO_SEND_KM = 0.01;
+// A big jump (e.g. GPS reacquired after a tunnel) may be sent early,
+// but never more often than MIN_SEND_GAP_MS.
+const EARLY_SEND_DISTANCE_KM = 0.1;
+const MIN_SEND_GAP_MS = 3_000;
 
 export function useGpsTracking({ courierId, onPosition, onError }: Options) {
   const [state, setState] = useState<TrackingState>("idle");
@@ -42,7 +47,13 @@ export function useGpsTracking({ courierId, onPosition, onError }: Options) {
 
   // ── Send position to server via HTTP → Pusher broadcast ───────────────────
   const sendToServer = useCallback(async (pos: GpsPosition) => {
-    const payload = { courierId, lat: pos.lat, lng: pos.lng, speed: pos.speed, heading: pos.heading };
+    // The API expects speed in m/s (same as the Flutter app); pos.speed is km/h.
+    const payload = { courierId, lat: pos.lat, lng: pos.lng, speed: pos.speed / 3.6, heading: pos.heading };
+
+    // Mark as sent before the request so fixes arriving while it is in flight
+    // don't trigger duplicate sends.
+    lastSentRef.current = pos;
+    lastSendTimeRef.current = Date.now();
 
     try {
       await fetch("/api/tracking", {
@@ -54,9 +65,6 @@ export function useGpsTracking({ courierId, onPosition, onError }: Options) {
     } catch {
       // Network error — position will be sent on next tick
     }
-
-    lastSentRef.current = pos;
-    lastSendTimeRef.current = Date.now();
   }, [courierId]);
 
   // ── Acquire WakeLock ───────────────────────────────────────────────────────
@@ -97,7 +105,11 @@ export function useGpsTracking({ courierId, onPosition, onError }: Options) {
       ? haversineDistance(lastSent.lat, lastSent.lng, pos.lat, pos.lng)
       : Infinity;
 
-    if (!lastSent || timeSinceLast >= intervalMs || distMoved >= MIN_DISTANCE_TO_SEND_KM) {
+    if (
+      !lastSent ||
+      timeSinceLast >= intervalMs ||
+      (distMoved >= EARLY_SEND_DISTANCE_KM && timeSinceLast >= MIN_SEND_GAP_MS)
+    ) {
       sendToServer(pos);
     }
   }, [onPosition, sendToServer]);

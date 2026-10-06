@@ -1,17 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { pusher, ADMIN_CHANNEL, EVENTS } from "@/lib/pusher";
+import { FINISHED_DELIVERY_STATUSES } from "@/lib/delivery-status";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const courierId = searchParams.get("courierId");
+    // historyDays=N keeps every open delivery but only the finished ones
+    // (delivered/cancelled) from the last N calendar days, so the payload no
+    // longer grows with the whole history.
+    const historyDays = parseInt(searchParams.get("historyDays") ?? "", 10);
+
+    let historyFilter = {};
+    if (historyDays > 0) {
+      const since = new Date();
+      since.setHours(0, 0, 0, 0);
+      since.setDate(since.getDate() - (historyDays - 1));
+      historyFilter = {
+        OR: [
+          { status: { notIn: [...FINISHED_DELIVERY_STATUSES] } },
+          { deliveredAt: { gte: since } },
+          { createdAt: { gte: since } },
+        ],
+      };
+    }
 
     const deliveries = await prisma.delivery.findMany({
       where: {
         ...(status ? { status } : {}),
         ...(courierId ? { courierId } : {}),
+        ...historyFilter,
       },
       include: {
         courier: { select: { id: true, name: true, phone: true } },
