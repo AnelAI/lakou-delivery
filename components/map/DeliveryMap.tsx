@@ -304,7 +304,7 @@ export function DeliveryMap({
                     <div style={{ fontSize: 12, color: "#6b7280" }}>{courier.phone}</div>
                     {courier.speed > 0 && (
                       <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                        {Math.round(courier.speed)} km/h
+                        {Math.round(courier.speed * 3.6)} km/h
                       </div>
                     )}
                     {courier.deliveries?.length ? (

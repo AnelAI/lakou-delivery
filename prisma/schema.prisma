@@ -75,6 +75,10 @@ model Delivery {
   pickedUpAt      DateTime?
   deliveredAt     DateTime?
   createdAt       DateTime  @default(now())
+
+  @@index([courierId, status])
+  @@index([status, deliveredAt])
+  @@index([merchantId])
 }
 
 model CourierLocation {
@@ -86,6 +90,8 @@ model CourierLocation {
   speed     Float    @default(0)
   heading   Float    @default(0)
   timestamp DateTime @default(now())
+
+  @@index([courierId, timestamp])
 }
 
 model Alert {
@@ -98,6 +104,9 @@ model Alert {
   resolved   Boolean  @default(false)
   resolvedAt DateTime?
   createdAt  DateTime @default(now())
+
+  @@index([courierId, resolved, type])
+  @@index([resolved, createdAt])
 }
 
 model AdminPushSubscription {
@@ -117,4 +126,6 @@ model DeliveryNotification {
   deliveryId   String?
   read         Boolean  @default(false)
   createdAt    DateTime @default(now())
+
+  @@index([createdAt])
 }

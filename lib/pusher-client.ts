@@ -3,11 +3,28 @@ import PusherClient from "pusher-js";
 // Singleton client — shared across components
 let client: PusherClient | null = null;
 
+// Without a key/cluster (e.g. env vars not set for a Vercel Preview build),
+// `new PusherClient()` throws and the whole page crashes. Fall back to a
+// no-op client instead: the app works, just without live updates.
+function createNoopClient(): PusherClient {
+  const channel = { bind() {}, unbind() {}, unbind_all() {} };
+  return {
+    subscribe: () => channel,
+    unsubscribe() {},
+    disconnect() {},
+  } as unknown as PusherClient;
+}
+
 export function getPusherClient(): PusherClient {
   if (!client) {
-    client = new PusherClient(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-    });
+    const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
+    const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+    if (!key || !cluster) {
+      console.warn("[pusher] NEXT_PUBLIC_PUSHER_KEY/CLUSTER missing — live updates disabled");
+      client = createNoopClient();
+    } else {
+      client = new PusherClient(key, { cluster });
+    }
   }
   return client;
 }

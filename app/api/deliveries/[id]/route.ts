@@ -4,6 +4,25 @@ import { haversineDistance, estimateTravelTime } from "@/lib/geo";
 import { pusher, ADMIN_CHANNEL, courierChannel, EVENTS } from "@/lib/pusher";
 import { notifyAdmin } from "@/lib/web-push";
 import { sendCourierFcm } from "@/lib/firebase-admin";
+import { ACTIVE_DELIVERY_STATUSES } from "@/lib/delivery-status";
+
+// Fields of the courier that may be sent to clients. Never include accessKey
+// or fcmToken: delivery updates are broadcast on a public Pusher channel.
+const COURIER_PUBLIC = { select: { id: true, name: true, phone: true } } as const;
+
+// Sets the courier back to "available" if it has no other active delivery.
+// One UPDATE with a NOT EXISTS filter instead of a COUNT followed by an UPDATE.
+function releaseCourierIfIdle(courierId: string, exceptDeliveryId: string) {
+  return prisma.courier.updateMany({
+    where: {
+      id: courierId,
+      deliveries: {
+        none: { status: { in: [...ACTIVE_DELIVERY_STATUSES] }, id: { not: exceptDeliveryId } },
+      },
+    },
+    data: { status: "available" },
+  });
+}
 
 // Raw SQL insert — bypasses generated Prisma model so it works before `prisma generate`
 function saveNotif(kind: string, courierName: string, orderNumber: string, customerName: string | null, deliveryId: string) {
@@ -23,7 +42,7 @@ export async function GET(
     const { id } = await params;
     const delivery = await withRetry(() => prisma.delivery.findUnique({
       where: { id },
-      include: { courier: true },
+      include: { courier: COURIER_PUBLIC },
     }));
 
     if (!delivery) {
@@ -47,26 +66,27 @@ export async function PATCH(
 
     let updateData: Record<string, unknown> = { ...rest };
 
+    // Actions that read the current delivery share a single lookup.
+    const needsCurrent = ["assign", "unassign", "deliver", "cancel", "acknowledge", "refuse", "arrived"].includes(action);
+    const current = needsCurrent
+      ? await prisma.delivery.findUnique({
+          where: { id },
+          include: { courier: { select: { id: true, name: true, fcmToken: true } } },
+        })
+      : null;
+    const previousCourierId = current?.courierId ?? null;
+
     if (action === "assign" && courierId) {
-      const courier = await prisma.courier.findUnique({ where: { id: courierId } });
-      const delivery = await prisma.delivery.findUnique({ where: { id } });
+      const delivery = current;
+      const courier = await prisma.courier.findUnique({
+        where: { id: courierId },
+        select: { currentLat: true, currentLng: true, fcmToken: true },
+      });
 
       if (courier && delivery) {
         // Free previous courier when reassigning
         if (delivery.courierId && delivery.courierId !== courierId) {
-          const prevRemaining = await prisma.delivery.count({
-            where: {
-              courierId: delivery.courierId,
-              status: { in: ["assigned", "confirmed", "picked_up"] },
-              id: { not: id },
-            },
-          });
-          if (prevRemaining === 0) {
-            await prisma.courier.update({
-              where: { id: delivery.courierId },
-              data: { status: "available" },
-            });
-          }
+          await releaseCourierIfIdle(delivery.courierId, id);
         }
 
         const startLat = courier.currentLat ?? delivery.pickupLat;
@@ -126,24 +146,9 @@ export async function PATCH(
         }
       }
     } else if (action === "unassign") {
-      const delivery = await prisma.delivery.findUnique({
-        where: { id },
-        include: { courier: true },
-      });
+      const delivery = current;
       if (delivery?.courierId) {
-        const remaining = await prisma.delivery.count({
-          where: {
-            courierId: delivery.courierId,
-            status: { in: ["assigned", "confirmed", "picked_up"] },
-            id: { not: id },
-          },
-        });
-        if (remaining === 0) {
-          await prisma.courier.update({
-            where: { id: delivery.courierId },
-            data: { status: "available" },
-          });
-        }
+        await releaseCourierIfIdle(delivery.courierId, id);
         if (delivery.courier?.fcmToken) {
           sendCourierFcm(delivery.courier.fcmToken, {
             title: "Course désassignée",
@@ -158,46 +163,17 @@ export async function PATCH(
     } else if (action === "deliver") {
       updateData = { ...updateData, status: "delivered", deliveredAt: new Date() };
 
-      const currentDelivery = await prisma.delivery.findUnique({ where: { id } });
-      if (currentDelivery?.courierId) {
-        const remaining = await prisma.delivery.count({
-          where: {
-            courierId: currentDelivery.courierId,
-            status: { in: ["assigned", "confirmed", "picked_up"] },
-            id: { not: id },
-          },
-        });
-        if (remaining === 0) {
-          await prisma.courier.update({
-            where: { id: currentDelivery.courierId },
-            data: { status: "available" },
-          });
-        }
+      if (current?.courierId) {
+        await releaseCourierIfIdle(current.courierId, id);
       }
     } else if (action === "cancel") {
-      const currentDelivery = await prisma.delivery.findUnique({
-        where: { id },
-        include: { courier: true },
-      });
-      if (currentDelivery?.courierId) {
-        const remaining = await prisma.delivery.count({
-          where: {
-            courierId: currentDelivery.courierId,
-            status: { in: ["assigned", "confirmed", "picked_up"] },
-            id: { not: id },
-          },
-        });
-        if (remaining === 0) {
-          await prisma.courier.update({
-            where: { id: currentDelivery.courierId },
-            data: { status: "available" },
-          });
-        }
-        if (currentDelivery.courier?.fcmToken) {
-          sendCourierFcm(currentDelivery.courier.fcmToken, {
+      if (current?.courierId) {
+        await releaseCourierIfIdle(current.courierId, id);
+        if (current.courier?.fcmToken) {
+          sendCourierFcm(current.courier.fcmToken, {
             title: "Course annulée",
-            body: `La course #${currentDelivery.orderNumber} a été annulée par l'admin`,
-            data: { type: "cancelled", deliveryId: id, orderNumber: currentDelivery.orderNumber },
+            body: `La course #${current.orderNumber} a été annulée par l'admin`,
+            data: { type: "cancelled", deliveryId: id, orderNumber: current.orderNumber },
           }).catch(console.error);
         }
       }
@@ -224,10 +200,6 @@ export async function PATCH(
     } else if (action === "update-description") {
       updateData = { deliveryDescription: body.deliveryDescription ?? null };
     } else if (action === "acknowledge") {
-      const current = await prisma.delivery.findUnique({
-        where: { id },
-        include: { courier: true },
-      });
       if (current?.courier) {
         pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERY_ACKNOWLEDGED, {
           courierName: current.courier.name,
@@ -244,24 +216,8 @@ export async function PATCH(
       }
       updateData = { status: "confirmed", confirmedAt: new Date() };
     } else if (action === "refuse") {
-      const current = await prisma.delivery.findUnique({
-        where: { id },
-        include: { courier: true },
-      });
       if (current?.courierId) {
-        const remaining = await prisma.delivery.count({
-          where: {
-            courierId: current.courierId,
-            status: { in: ["assigned", "confirmed", "picked_up"] },
-            id: { not: id },
-          },
-        });
-        if (remaining === 0) {
-          await prisma.courier.update({
-            where: { id: current.courierId },
-            data: { status: "available" },
-          });
-        }
+        await releaseCourierIfIdle(current.courierId, id);
         if (current.courier) {
           pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERY_REFUSED, {
             courierName: current.courier.name,
@@ -280,10 +236,6 @@ export async function PATCH(
       }
       updateData = { status: "pending", courierId: null };
     } else if (action === "arrived") {
-      const current = await prisma.delivery.findUnique({
-        where: { id },
-        include: { courier: true },
-      });
       if (current?.courier) {
         pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERY_ARRIVED, {
           courierName: current.courier.name,
@@ -305,10 +257,16 @@ export async function PATCH(
     const delivery = await prisma.delivery.update({
       where: { id },
       data: updateData,
-      include: { courier: true },
+      include: { courier: COURIER_PUBLIC },
     });
 
-    pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_UPDATED, delivery).catch(console.error);
+    // Couriers listen on their own channel only (not on "admin", which also
+    // carries every GPS update), so notify the old and new courier directly.
+    const channels = [ADMIN_CHANNEL];
+    for (const cId of [delivery.courierId, previousCourierId]) {
+      if (cId && !channels.includes(courierChannel(cId))) channels.push(courierChannel(cId));
+    }
+    pusher.trigger(channels, EVENTS.DELIVERIES_UPDATED, delivery).catch(console.error);
 
     // Web push + DB save for courier status changes
     if (action === "pickup" && delivery.courier) {
@@ -343,8 +301,11 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.delivery.delete({ where: { id } });
-    pusher.trigger(ADMIN_CHANNEL, EVENTS.DELIVERIES_UPDATED, {}).catch(console.error);
+    const deleted = await prisma.delivery.delete({ where: { id }, select: { courierId: true } });
+    const channels = deleted.courierId
+      ? [ADMIN_CHANNEL, courierChannel(deleted.courierId)]
+      : ADMIN_CHANNEL;
+    pusher.trigger(channels, EVENTS.DELIVERIES_UPDATED, {}).catch(console.error);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Failed to delete delivery" }, { status: 500 });

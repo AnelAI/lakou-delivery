@@ -1,4 +1,7 @@
 {
   "buildCommand": "npx prisma generate && next build",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    { "path": "/api/cron/purge", "schedule": "0 3 * * *" }
+  ]
 }
